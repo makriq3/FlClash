@@ -127,6 +127,9 @@ jobs:
           flutter --version
           flutter pub get
 
+      - name: Проверить Flutter analyze
+        run: flutter analyze lib test setup.dart
+
       - name: Запустить Android-регрессионные тесты
         if: startsWith(matrix.platform,'android')
         run: flutter test test/common

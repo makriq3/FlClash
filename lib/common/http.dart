@@ -5,7 +5,7 @@ import 'package:fl_clash/controller.dart';
 
 class FlClashHttpOverrides extends HttpOverrides {
   static String handleFindProxy(Uri url) {
-    if ({localhost, '127.0.0.1', '::1', '[::1]'}.contains(url.host)) {
+    if ({localhost, '::1', '[::1]'}.contains(url.host)) {
       return 'DIRECT';
     }
     final port = appController.config.patchClashConfig.mixedPort;

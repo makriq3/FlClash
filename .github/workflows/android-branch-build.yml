@@ -8,6 +8,9 @@ on:
       - 'codex/**'
       - 'feature/**'
       - 'fix/**'
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -65,6 +68,9 @@ jobs:
         run: |
           flutter --version
           flutter pub get
+
+      - name: Проверить Flutter analyze
+        run: flutter analyze lib test setup.dart
 
       - name: Запустить Android-регрессионные тесты
         run: flutter test test/common

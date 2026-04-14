@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/controller.dart';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -30,11 +31,12 @@ class _AndroidContainerState extends ConsumerState<AndroidManager>
     }, fireImmediately: true);
     ref.listenManual(sharedStateProvider, (prev, next) {
       if (prev != next) {
+        final resolvedSharedState = appController.resolveSharedState(next);
         debouncer.call(FunctionTag.saveSharedFile, () async {
-          preferences.saveShareState(next);
+          preferences.saveShareState(resolvedSharedState);
         }, duration: Duration(seconds: 1));
         if (prev?.needSyncSharedState != next.needSyncSharedState) {
-          service?.syncState(next.needSyncSharedState);
+          service?.syncState(resolvedSharedState.needSyncSharedState);
         }
       }
     });

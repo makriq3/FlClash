@@ -83,28 +83,26 @@ UpdateParams updateParams(Ref ref) {
     vpnSettingProvider.select((state) => state.enable),
   );
   return ref.watch(
-    patchClashConfigProvider.select(
-      (state) {
-        final runtimeConfig = resolveAndroidRuntimeClashConfig(
-          state,
-          routeMode: routeMode,
-          isAndroid: system.isAndroid,
-          vpnEnabled: vpnEnabled,
-        );
-        return UpdateParams(
-          tun: runtimeConfig.tun,
-          allowLan: runtimeConfig.allowLan,
-          findProcessMode: runtimeConfig.findProcessMode,
-          mode: runtimeConfig.mode,
-          logLevel: runtimeConfig.logLevel,
-          ipv6: runtimeConfig.ipv6,
-          tcpConcurrent: runtimeConfig.tcpConcurrent,
-          externalController: runtimeConfig.externalController,
-          unifiedDelay: runtimeConfig.unifiedDelay,
-          mixedPort: runtimeConfig.mixedPort,
-        );
-      },
-    ),
+    patchClashConfigProvider.select((state) {
+      final runtimeConfig = resolveAndroidRuntimeClashConfig(
+        state,
+        routeMode: routeMode,
+        isAndroid: system.isAndroid,
+        vpnEnabled: vpnEnabled,
+      );
+      return UpdateParams(
+        tun: runtimeConfig.tun,
+        allowLan: runtimeConfig.allowLan,
+        findProcessMode: runtimeConfig.findProcessMode,
+        mode: runtimeConfig.mode,
+        logLevel: runtimeConfig.logLevel,
+        ipv6: runtimeConfig.ipv6,
+        tcpConcurrent: runtimeConfig.tcpConcurrent,
+        externalController: runtimeConfig.externalController,
+        unifiedDelay: runtimeConfig.unifiedDelay,
+        mixedPort: runtimeConfig.mixedPort,
+      );
+    }),
   );
 }
 
@@ -618,9 +616,7 @@ SharedState sharedState(Ref ref) {
     networkSettingProvider.select((state) => state.routeMode),
   );
   final clashConfigVM2 = ref.watch(
-    patchClashConfigProvider.select(
-      (state) => VM2(state.tun, state.mixedPort),
-    ),
+    patchClashConfigProvider.select((state) => VM2(state.tun, state.mixedPort)),
   );
   final vpnSetting = ref.watch(vpnSettingProvider);
   final currentProfileName = currentProfileVM2.a;

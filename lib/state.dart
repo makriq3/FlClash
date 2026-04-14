@@ -44,6 +44,7 @@ class GlobalState {
   UpdateTasks tasks = [];
   SetupState? lastSetupState;
   VpnState? lastVpnState;
+  AccessControlProps? lastAndroidProfileAccessControlOverride;
 
   bool get isStart => startTime != null && startTime!.isBeforeNow;
 

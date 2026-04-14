@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:fl_clash/core/core.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/plugins/app.dart';
+import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/dialog.dart';
@@ -143,9 +144,7 @@ extension InitControllerExt on AppController {
     if (!_ref.read(appSettingProvider).autoCheckUpdate) return;
     final res = await request.checkForUpdate(
       includePrerelease: _ref.read(
-        appSettingProvider.select(
-          (state) => state.includePrereleaseUpdates,
-        ),
+        appSettingProvider.select((state) => state.includePrereleaseUpdates),
       ),
     );
     checkUpdateResultHandle(data: res);
@@ -229,7 +228,20 @@ extension StateControllerExt on AppController {
   }
 
   SharedState get sharedState {
-    return _ref.read(sharedStateProvider);
+    return resolveSharedState(_ref.read(sharedStateProvider));
+  }
+
+  SharedState resolveSharedState(SharedState sharedState) {
+    final accessControlOverride =
+        globalState.lastAndroidProfileAccessControlOverride;
+    if (accessControlOverride == null || sharedState.vpnOptions == null) {
+      return sharedState;
+    }
+    return sharedState.copyWith(
+      vpnOptions: sharedState.vpnOptions?.copyWith(
+        accessControlProps: accessControlOverride,
+      ),
+    );
   }
 
   SetupParams get setupParams {
@@ -656,6 +668,7 @@ extension SetupControllerExt on AppController {
   Future<Map<String, dynamic>> getProfile({
     required SetupState setupState,
     required ClashConfig patchConfig,
+    void Function(AccessControlProps? value)? onAndroidAccessControlResolved,
   }) async {
     final profileId = setupState.profileId;
     if (profileId == null) {
@@ -694,6 +707,12 @@ extension SetupControllerExt on AppController {
     if (scriptContent?.isNotEmpty == true) {
       rawConfig = await globalState.handleEvaluate(scriptContent!, rawConfig);
     }
+    onAndroidAccessControlResolved?.call(
+      resolveAndroidProfileAccessControlOverride(
+        rawConfig,
+        isAndroid: system.isAndroid,
+      ),
+    );
     rawConfig = applyAndroidVpnProfileCompatibility(
       rawConfig,
       isAndroid: system.isAndroid,
@@ -750,12 +769,22 @@ extension SetupControllerExt on AppController {
     globalState.lastSetupState = setupState;
     if (system.isAndroid) {
       globalState.lastVpnState = _ref.read(vpnStateProvider);
-      preferences.saveShareState(this.sharedState);
+      globalState.lastAndroidProfileAccessControlOverride = null;
     }
+    final onAndroidAccessControlResolved = system.isAndroid
+        ? (AccessControlProps? value) {
+            globalState.lastAndroidProfileAccessControlOverride = value;
+          }
+        : null;
     final config = await getProfile(
       setupState: setupState,
       patchConfig: realPatchConfig,
+      onAndroidAccessControlResolved: onAndroidAccessControlResolved,
     );
+    if (system.isAndroid) {
+      preferences.saveShareState(this.sharedState);
+      await service?.syncState(this.sharedState.needSyncSharedState);
+    }
     final configFilePath = await appPath.configFilePath;
     final yamlString = await encodeYamlTask(config);
     await File(configFilePath).safeWriteAsString(yamlString);

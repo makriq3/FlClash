@@ -10,6 +10,50 @@ bool shouldApplyAndroidVpnHardening({
   return isAndroid && vpnEnabled;
 }
 
+AccessControlProps? resolveAndroidProfileAccessControlOverride(
+  Map<String, dynamic> rawConfig, {
+  required bool isAndroid,
+}) {
+  if (!isAndroid) {
+    return null;
+  }
+
+  final tun = _asStringKeyedMap(rawConfig['tun']);
+  final includePackages = _asPackageList(
+    tun['include-package'],
+    fieldName: 'tun.include-package',
+  );
+  final excludePackages = _asPackageList(
+    tun['exclude-package'],
+    fieldName: 'tun.exclude-package',
+  );
+
+  if (includePackages.isNotEmpty && excludePackages.isNotEmpty) {
+    throw const FormatException(
+      'Android profile split tunneling is ambiguous: use either '
+      '`tun.include-package` or `tun.exclude-package`, not both.',
+    );
+  }
+
+  if (includePackages.isNotEmpty) {
+    return AccessControlProps(
+      enable: true,
+      mode: AccessControlMode.acceptSelected,
+      acceptList: includePackages,
+    );
+  }
+
+  if (excludePackages.isNotEmpty) {
+    return AccessControlProps(
+      enable: true,
+      mode: AccessControlMode.rejectSelected,
+      rejectList: excludePackages,
+    );
+  }
+
+  return null;
+}
+
 VpnOptions applyResolvedTunToVpnOptions(
   VpnOptions options, {
   required Tun tun,
@@ -58,9 +102,9 @@ Tun _resolveTunForPlatform(
   return switch (isDesktop) {
     true => tun.copyWith(autoRoute: true, routeAddress: const []),
     false => tun.copyWith(
-        autoRoute: routeAddress.isEmpty,
-        routeAddress: routeAddress,
-      ),
+      autoRoute: routeAddress.isEmpty,
+      routeAddress: routeAddress,
+    ),
   };
 }
 
@@ -115,7 +159,7 @@ List<String> buildAndroidVpnCompatibilityRules({
   )) {
     return const [];
   }
-  final rules = LinkedHashSet<String>();
+  final rules = <String>{};
   for (final pattern in bypassDomain) {
     final rule = _convertBypassPatternToDirectRule(pattern);
     if (rule != null) {
@@ -145,14 +189,13 @@ Map<String, dynamic> applyAndroidVpnProfileCompatibility(
     bypassDomain: bypassDomain,
   );
   if (compatibilityRules.isNotEmpty) {
-    final existingRules = (patched['rules'] as List?)
-            ?.map((item) => item.toString())
-            .toList() ??
+    final existingRules =
+        (patched['rules'] as List?)?.map((item) => item.toString()).toList() ??
         const <String>[];
-    patched['rules'] = LinkedHashSet<String>.from([
+    patched['rules'] = <String>{
       ...compatibilityRules,
       ...existingRules,
-    ]).toList();
+    }.toList();
   }
 
   final sniffer = _asStringKeyedMap(patched['sniffer']);
@@ -172,14 +215,8 @@ Map<String, dynamic> applyAndroidVpnProfileCompatibility(
     ports: const ['80', '8080-8880'],
     overrideDestination: true,
   );
-  sniff['TLS'] = _mergeSniffPorts(
-    sniff['TLS'],
-    ports: const ['443', '8443'],
-  );
-  sniff['QUIC'] = _mergeSniffPorts(
-    sniff['QUIC'],
-    ports: const ['443', '8443'],
-  );
+  sniff['TLS'] = _mergeSniffPorts(sniff['TLS'], ports: const ['443', '8443']);
+  sniff['QUIC'] = _mergeSniffPorts(sniff['QUIC'], ports: const ['443', '8443']);
   sniffer['sniff'] = sniff;
   patched['sniffer'] = sniffer;
 
@@ -220,9 +257,7 @@ Map<String, dynamic> _asStringKeyedMap(dynamic value) {
   if (value is! Map) {
     return <String, dynamic>{};
   }
-  return value.map(
-    (key, mapValue) => MapEntry(key.toString(), mapValue),
-  );
+  return value.map((key, mapValue) => MapEntry(key.toString(), mapValue));
 }
 
 List<String> _asStringList(dynamic value) {
@@ -230,6 +265,30 @@ List<String> _asStringList(dynamic value) {
     return const [];
   }
   return value.map((item) => item.toString()).toList();
+}
+
+List<String> _asPackageList(dynamic value, {required String fieldName}) {
+  if (value == null) {
+    return const [];
+  }
+  if (value is String) {
+    final normalized = value.trim();
+    return normalized.isEmpty ? const [] : [normalized];
+  }
+  if (value is! List) {
+    throw FormatException(
+      'Profile field `$fieldName` must be a YAML list of Android package names.',
+    );
+  }
+  final packages = <String>{};
+  for (final item in value) {
+    final normalized = item.toString().trim();
+    if (normalized.isEmpty) {
+      continue;
+    }
+    packages.add(normalized);
+  }
+  return packages.toList();
 }
 
 String? _convertBypassPatternToDirectRule(String rawPattern) {
@@ -274,8 +333,9 @@ String? _convertIpv4PatternToRule(String pattern) {
     }
   }
 
-  final slash24Match = RegExp(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\*$')
-      .firstMatch(pattern);
+  final slash24Match = RegExp(
+    r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\*$',
+  ).firstMatch(pattern);
   if (slash24Match != null) {
     final octets = slash24Match.groups([1, 2, 3]);
     if (_isValidOctets(octets)) {
@@ -283,9 +343,9 @@ String? _convertIpv4PatternToRule(String pattern) {
     }
   }
 
-  final slash16Match = RegExp(r'^(\d{1,3})\.(\d{1,3})\.\*$').firstMatch(
-    pattern,
-  );
+  final slash16Match = RegExp(
+    r'^(\d{1,3})\.(\d{1,3})\.\*$',
+  ).firstMatch(pattern);
   if (slash16Match != null) {
     final octets = slash16Match.groups([1, 2]);
     if (_isValidOctets(octets)) {
