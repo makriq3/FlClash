@@ -13,6 +13,7 @@ API_URL = f"http://localhost:8081/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
 
 DIST_DIR = os.path.join(os.getcwd(), "dist")
 release = os.path.join(os.getcwd(), "release.md")
+release_summary = os.path.join(os.getcwd(), "release_summary.txt")
 
 text = ""
 
@@ -45,14 +46,20 @@ if TAG:
     text += f"\n**{TAG}**\n"
 
 if IS_STABLE:
-    text += f"\nhttps://github.com/makriq3/FlClash/releases/tag/{TAG}\n"
+    text += f"\nhttps://github.com/makriq-org/FlClash/releases/tag/{TAG}\n"
 else:
-    text += f"\nhttps://github.com/makriq3/FlClash/actions/runs/{RUN_ID}\n"
+    text += f"\nhttps://github.com/makriq-org/FlClash/actions/runs/{RUN_ID}\n"
 
-if os.path.exists(release):
+if os.path.exists(release_summary):
+    text += "\n"
+    with open(release_summary, 'r') as f:
+        text += f.read()
+    text += "\n"
+elif os.path.exists(release):
     text += "\n"
     with open(release, 'r') as f:
-        text += f.read()
+        lines = [line.strip() for line in f.readlines() if line.strip()]
+        text += "\n".join(lines[:8])
     text += "\n"
 
 if media:

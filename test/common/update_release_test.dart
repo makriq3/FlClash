@@ -6,7 +6,9 @@ void main() {
     final release = AppRelease(
       tagName: 'v0.8.95',
       body: '',
-      htmlUrl: 'https://github.com/makriq3/FlClash/releases/tag/v0.8.95',
+      htmlUrl: 'https://github.com/makriq-org/FlClash/releases/tag/v0.8.95',
+      prerelease: false,
+      draft: false,
       assets: [
         ReleaseAsset(
           name: 'FlClash-0.8.95-android-arm64-v8a.apk',
@@ -59,5 +61,58 @@ void main() {
       parsed,
       'c330912450ff08461b11f755bc3733c6b6a9c71396324a2e3e40d1589bdff62e',
     );
+  });
+
+  group('latest release selection', () {
+    AppRelease buildRelease(
+      String tagName, {
+      bool prerelease = false,
+      bool draft = false,
+    }) {
+      return AppRelease(
+        tagName: tagName,
+        body: '',
+        htmlUrl: 'https://github.com/makriq-org/FlClash/releases/tag/$tagName',
+        assets: const [],
+        prerelease: prerelease,
+        draft: draft,
+      );
+    }
+
+    test('stable channel ignores prereleases', () {
+      final release = selectLatestRelease([
+        buildRelease('v0.8.95'),
+        buildRelease('v0.9.00-pre1', prerelease: true),
+      ], includePrerelease: false);
+
+      expect(release?.tagName, 'v0.8.95');
+    });
+
+    test('pre-release channel can select the newest prerelease', () {
+      final release = selectLatestRelease([
+        buildRelease('v0.8.95'),
+        buildRelease('v0.9.00-pre1', prerelease: true),
+      ], includePrerelease: true);
+
+      expect(release?.tagName, 'v0.9.00-pre1');
+    });
+
+    test('pre-release channel still prefers stable of same version core', () {
+      final release = selectLatestRelease([
+        buildRelease('v0.9.00-pre1', prerelease: true),
+        buildRelease('v0.9.0'),
+      ], includePrerelease: true);
+
+      expect(release?.tagName, 'v0.9.0');
+    });
+
+    test('draft releases are ignored for all channels', () {
+      final release = selectLatestRelease([
+        buildRelease('v0.9.01', draft: true),
+        buildRelease('v0.8.95'),
+      ], includePrerelease: true);
+
+      expect(release?.tagName, 'v0.8.95');
+    });
   });
 }

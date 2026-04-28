@@ -141,7 +141,13 @@ extension InitControllerExt on AppController {
 
   Future<void> autoCheckUpdate() async {
     if (!_ref.read(appSettingProvider).autoCheckUpdate) return;
-    final res = await request.checkForUpdate();
+    final res = await request.checkForUpdate(
+      includePrerelease: _ref.read(
+        appSettingProvider.select(
+          (state) => state.includePrereleaseUpdates,
+        ),
+      ),
+    );
     checkUpdateResultHandle(data: res);
   }
 

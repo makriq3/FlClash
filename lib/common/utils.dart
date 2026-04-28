@@ -157,26 +157,63 @@ class Utils {
   }
 
   int compareVersions(String version1, String version2) {
-    List<String> v1 = version1.split('+')[0].split('.');
-    List<String> v2 = version2.split('+')[0].split('.');
-    int major1 = int.parse(v1[0]);
-    int major2 = int.parse(v2[0]);
-    if (major1 != major2) {
-      return major1.compareTo(major2);
+    final parsedVersion1 = _ParsedVersion.parse(version1);
+    final parsedVersion2 = _ParsedVersion.parse(version2);
+
+    final coreComparisons = [
+      parsedVersion1.major.compareTo(parsedVersion2.major),
+      parsedVersion1.minor.compareTo(parsedVersion2.minor),
+      parsedVersion1.patch.compareTo(parsedVersion2.patch),
+    ];
+    for (final comparison in coreComparisons) {
+      if (comparison != 0) {
+        return comparison;
+      }
     }
-    int minor1 = v1.length > 1 ? int.parse(v1[1]) : 0;
-    int minor2 = v2.length > 1 ? int.parse(v2[1]) : 0;
-    if (minor1 != minor2) {
-      return minor1.compareTo(minor2);
+
+    final prereleaseComparison = _compareIdentifiers(
+      parsedVersion1.prerelease,
+      parsedVersion2.prerelease,
+    );
+    if (prereleaseComparison != 0) {
+      return prereleaseComparison;
     }
-    int patch1 = v1.length > 2 ? int.parse(v1[2]) : 0;
-    int patch2 = v2.length > 2 ? int.parse(v2[2]) : 0;
-    if (patch1 != patch2) {
-      return patch1.compareTo(patch2);
+
+    return _compareBuildMetadata(parsedVersion1.build, parsedVersion2.build);
+  }
+
+  int _compareIdentifiers(
+    List<_VersionIdentifier> left,
+    List<_VersionIdentifier> right,
+  ) {
+    if (left.isEmpty && right.isEmpty) {
+      return 0;
     }
-    int build1 = version1.contains('+') ? int.parse(version1.split('+')[1]) : 0;
-    int build2 = version2.contains('+') ? int.parse(version2.split('+')[1]) : 0;
-    return build1.compareTo(build2);
+    if (left.isEmpty) {
+      return 1;
+    }
+    if (right.isEmpty) {
+      return -1;
+    }
+
+    final minLength = min(left.length, right.length);
+    for (var index = 0; index < minLength; index++) {
+      final comparison = left[index].compareTo(right[index]);
+      if (comparison != 0) {
+        return comparison;
+      }
+    }
+    return left.length.compareTo(right.length);
+  }
+
+  int _compareBuildMetadata(
+    List<_VersionIdentifier> left,
+    List<_VersionIdentifier> right,
+  ) {
+    if (left.isEmpty || right.isEmpty) {
+      return 0;
+    }
+    return _compareIdentifiers(left, right);
   }
 
   // String getPinyin(String value) {
@@ -351,6 +388,92 @@ class Utils {
     }
 
     return hash;
+  }
+}
+
+final class _ParsedVersion {
+  _ParsedVersion({
+    required this.major,
+    required this.minor,
+    required this.patch,
+    required this.prerelease,
+    required this.build,
+  });
+
+  static final RegExp _pattern = RegExp(
+    r'^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$',
+  );
+  static final RegExp _identifierPattern = RegExp(r'[A-Za-z]+|\d+');
+
+  final int major;
+  final int minor;
+  final int patch;
+  final List<_VersionIdentifier> prerelease;
+  final List<_VersionIdentifier> build;
+
+  static _ParsedVersion parse(String value) {
+    final match = _pattern.firstMatch(value.trim());
+    if (match == null) {
+      return _ParsedVersion(
+        major: 0,
+        minor: 0,
+        patch: 0,
+        prerelease: _tokenize(value),
+        build: const [],
+      );
+    }
+    return _ParsedVersion(
+      major: int.parse(match.group(1)!),
+      minor: int.parse(match.group(2) ?? '0'),
+      patch: int.parse(match.group(3) ?? '0'),
+      prerelease: _tokenize(match.group(4)),
+      build: _tokenize(match.group(5)),
+    );
+  }
+
+  static List<_VersionIdentifier> _tokenize(String? value) {
+    if (value == null || value.isEmpty) {
+      return const [];
+    }
+    final matches = _identifierPattern.allMatches(value);
+    if (matches.isEmpty) {
+      return [_VersionIdentifier.text(value)];
+    }
+    return matches
+        .map((match) => _VersionIdentifier.fromToken(match.group(0)!))
+        .toList(growable: false);
+  }
+}
+
+final class _VersionIdentifier implements Comparable<_VersionIdentifier> {
+  const _VersionIdentifier._({this.number, this.text});
+
+  factory _VersionIdentifier.fromToken(String token) {
+    final parsed = int.tryParse(token);
+    if (parsed != null) {
+      return _VersionIdentifier._(number: parsed);
+    }
+    return _VersionIdentifier.text(token);
+  }
+
+  factory _VersionIdentifier.text(String token) {
+    return _VersionIdentifier._(text: token.toLowerCase());
+  }
+
+  final int? number;
+  final String? text;
+
+  bool get isNumber => number != null;
+
+  @override
+  int compareTo(_VersionIdentifier other) {
+    if (isNumber && other.isNumber) {
+      return number!.compareTo(other.number!);
+    }
+    if (isNumber != other.isNumber) {
+      return isNumber ? -1 : 1;
+    }
+    return text!.compareTo(other.text!);
   }
 }
 

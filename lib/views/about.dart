@@ -9,18 +9,24 @@ import 'package:fl_clash/widgets/scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class AboutView extends StatelessWidget {
+class AboutView extends ConsumerWidget {
   const AboutView({super.key});
 
-  Future<void> _checkUpdate(BuildContext context) async {
+  Future<void> _checkUpdate(BuildContext context, WidgetRef ref) async {
     final data = await appController.safeRun<AppRelease?>(
-      request.checkForUpdate,
+      () => request.checkForUpdate(
+        includePrerelease: ref.read(
+          appSettingProvider.select(
+            (state) => state.includePrereleaseUpdates,
+          ),
+        ),
+      ),
       title: appLocalizations.checkUpdate,
     );
     appController.checkUpdateResultHandle(data: data, isUser: true);
   }
 
-  List<Widget> _buildMoreSection(BuildContext context) {
+  List<Widget> _buildMoreSection(BuildContext context, WidgetRef ref) {
     return generateSection(
       separated: false,
       title: appLocalizations.more,
@@ -28,7 +34,7 @@ class AboutView extends StatelessWidget {
         ListItem(
           title: Text(appLocalizations.checkUpdate),
           onTap: () {
-            _checkUpdate(context);
+            _checkUpdate(context, ref);
           },
         ),
         ListItem(
@@ -43,7 +49,7 @@ class AboutView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final items = [
       ListTile(
         title: Column(
@@ -99,7 +105,7 @@ class AboutView extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 12),
-      ..._buildMoreSection(context),
+      ..._buildMoreSection(context, ref),
     ];
     return BaseScaffold(
       title: appLocalizations.about,

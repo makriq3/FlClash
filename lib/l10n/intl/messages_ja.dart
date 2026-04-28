@@ -106,6 +106,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "autoCheckUpdateDesc": MessageLookupByLibrary.simpleMessage(
       "起動時に更新を自動チェック",
     ),
+    "includePrereleaseUpdates": MessageLookupByLibrary.simpleMessage(
+      "プレリリース更新",
+    ),
+    "includePrereleaseUpdatesDesc": MessageLookupByLibrary.simpleMessage(
+      "更新確認時にプレリリースも含める",
+    ),
     "autoCloseConnections": MessageLookupByLibrary.simpleMessage("接続を自動閉じる"),
     "autoCloseConnectionsDesc": MessageLookupByLibrary.simpleMessage(
       "ノード変更後に接続を自動閉じる",

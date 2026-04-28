@@ -98,6 +98,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "auto": MessageLookupByLibrary.simpleMessage("自动"),
     "autoCheckUpdate": MessageLookupByLibrary.simpleMessage("自动检查更新"),
     "autoCheckUpdateDesc": MessageLookupByLibrary.simpleMessage("应用启动时自动检查更新"),
+    "includePrereleaseUpdates": MessageLookupByLibrary.simpleMessage(
+      "预发布更新",
+    ),
+    "includePrereleaseUpdatesDesc": MessageLookupByLibrary.simpleMessage(
+      "检查更新时包含预发布版本",
+    ),
     "autoCloseConnections": MessageLookupByLibrary.simpleMessage("自动关闭连接"),
     "autoCloseConnectionsDesc": MessageLookupByLibrary.simpleMessage(
       "切换节点后自动关闭连接",

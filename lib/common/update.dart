@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:fl_clash/common/utils.dart';
 
 class ReleaseAsset {
   ReleaseAsset({
@@ -55,6 +56,8 @@ class AppRelease {
     required this.body,
     required this.htmlUrl,
     required this.assets,
+    required this.prerelease,
+    required this.draft,
   });
 
   factory AppRelease.fromJson(Map<String, dynamic> json) {
@@ -70,6 +73,8 @@ class AppRelease {
       body: json['body']?.toString() ?? '',
       htmlUrl: json['html_url']?.toString() ?? '',
       assets: assets,
+      prerelease: json['prerelease'] as bool? ?? false,
+      draft: json['draft'] as bool? ?? false,
     );
   }
 
@@ -77,6 +82,8 @@ class AppRelease {
   final String body;
   final String htmlUrl;
   final List<ReleaseAsset> assets;
+  final bool prerelease;
+  final bool draft;
 
   String get version => tagName.startsWith('v') ? tagName.substring(1) : tagName;
 
@@ -89,6 +96,26 @@ class AppRelease {
     }
     return null;
   }
+}
+
+AppRelease? selectLatestRelease(
+  Iterable<AppRelease> releases, {
+  required bool includePrerelease,
+}) {
+  AppRelease? latestRelease;
+  for (final release in releases) {
+    if (release.draft) {
+      continue;
+    }
+    if (!includePrerelease && release.prerelease) {
+      continue;
+    }
+    if (latestRelease == null ||
+        utils.compareVersions(release.version, latestRelease.version) > 0) {
+      latestRelease = release;
+    }
+  }
+  return latestRelease;
 }
 
 class AndroidReleaseAsset {

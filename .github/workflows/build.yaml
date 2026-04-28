@@ -4,11 +4,27 @@ on:
   push:
     tags:
       - 'v*'
+
+permissions:
+  contents: read
+
 env:
   IS_STABLE: ${{ !contains(github.ref, '-') }}
 
 jobs:
+  release-notes-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+
+      - name: Проверить release notes
+        run: |
+          python3 .github/scripts/validate_release_notes.py \
+            --tag "${{ github.ref_name }}"
+
   build:
+    needs: [ release-notes-guard ]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -125,64 +141,9 @@ jobs:
           path: ./dist
           overwrite: true
 
-  changelog:
-    runs-on: ubuntu-latest
-    needs: [ build ]
-    steps:
-      - name: Получить код
-        uses: actions/checkout@v4
-        if: ${{ env.IS_STABLE == 'true' }}
-        with:
-          fetch-depth: 0
-          ref: refs/heads/main
-      - name: Сгенерировать changelog
-        if: ${{ env.IS_STABLE == 'true' }}
-        run: |
-          last_ver=$(grep -m1 '^## ' CHANGELOG.md 2>/dev/null | sed 's/^## //')
-          
-          tags=($(git tag --merged HEAD --sort=-creatordate))
-          
-          temp="NEW_CHANGELOG.md"
-          : > "$temp"
-          
-          for i in "${!tags[@]}"; do
-              curr="${tags[i]}"
-              [[ "$curr" == "$last_ver" ]] && break
-          
-              prev="${tags[i+1]}"
-              range="${prev:+$prev..}$curr"
-          
-              echo -e "## $curr\n" >> "$temp"
-              git log --no-merges --pretty=format:"%B" "$range" | \
-              awk '!/Update changelog/ && NF {print "- " $0 "\n"}' >> "$temp"
-          done
-          [ -f CHANGELOG.md ] && cat CHANGELOG.md >> "$temp"
-          
-          mv "$temp" CHANGELOG.md
-
-      - name: Зафиксировать changelog
-        if: ${{ env.IS_STABLE == 'true' }}
-        run: |
-          git add CHANGELOG.md
-          if ! git diff --cached --quiet; then
-            echo "Отправка коммита"
-            git config --local user.email "github-actions[bot]@users.noreply.github.com"
-            git config --local user.name "github-actions[bot]"
-            git commit -m "Update changelog"
-            git push
-            if [ $? -eq 0 ]; then
-              echo "Отправка прошла успешно"
-            else
-              echo "Отправка завершилась ошибкой"
-              exit 1
-            fi
-          fi
-
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   upload:
-    permissions: write-all
+    permissions:
+      contents: write
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
@@ -198,28 +159,17 @@ jobs:
           pattern: artifact-*
           merge-multiple: true
 
-      - name: Сформировать release.md
+      - name: Сформировать release notes
         run: |
-          out="release.md"
-          : > "$out"
-          version_tag="${{ github.ref_name }}"
-          awk -v tag="$version_tag" '
-            $0 == "## " tag { printing=1; next }
-            /^## / && printing { exit }
-            printing { print }
-          ' CHANGELOG.md >> "$out"
-      - name: Дополнить release.md шаблоном
-        run: |
-          version=$(echo "${{ github.ref_name }}" | sed 's/^v//')
-          temp="release_with_template.md"
-          printf '# FlClash %s\n\n' "$version" > "$temp"
-          cat release.md >> "$temp"
-          printf '\n' >> "$temp"
-          sed "s|VERSION|$version|g" ./.github/release_template.md >> "$temp"
-          mv "$temp" release.md
+          python3 .github/scripts/validate_release_notes.py \
+            --tag "${{ github.ref_name }}"
+          python3 .github/scripts/build_release_notes.py \
+            --tag "${{ github.ref_name }}" \
+            --repo-url "${{ github.server_url }}/${{ github.repository }}" \
+            --output release.md \
+            --summary-output release_summary.txt
 
       - name: Сгенерировать sha256
-        if: env.IS_STABLE == 'true'
         run: |
           cd ./dist
           for file in $(find . -type f -not -name "*.sha256"); do
@@ -227,8 +177,9 @@ jobs:
           done  
 
       - name: Опубликовать релиз
-        if: ${{ env.IS_STABLE == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
+          name: FlClash ${{ github.ref_name }}
+          prerelease: ${{ env.IS_STABLE != 'true' }}
           files: ./dist/*
           body_path: './release.md'

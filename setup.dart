@@ -482,7 +482,8 @@ class BuildCommand extends Command {
         final targets = [
           'deb',
           if (arch == Arch.amd64) 'appimage',
-          if (arch == Arch.amd64) 'rpm',
+          // RPM version fields reject semver prerelease markers like -pre1.
+          if (arch == Arch.amd64 && env == 'stable') 'rpm',
         ].join(',');
         final defaultTarget = targetMap[arch];
         await _getLinuxDependencies(arch!);

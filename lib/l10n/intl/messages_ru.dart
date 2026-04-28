@@ -140,6 +140,12 @@ class MessageLookup extends MessageLookupByLibrary {
     "autoCheckUpdateDesc": MessageLookupByLibrary.simpleMessage(
       "Автоматически проверять обновления при запуске приложения",
     ),
+    "includePrereleaseUpdates": MessageLookupByLibrary.simpleMessage(
+      "Pre-релизы",
+    ),
+    "includePrereleaseUpdatesDesc": MessageLookupByLibrary.simpleMessage(
+      "Учитывать pre-релизы при проверке обновлений",
+    ),
     "autoCloseConnections": MessageLookupByLibrary.simpleMessage(
       "Автоматическое закрытие соединений",
     ),

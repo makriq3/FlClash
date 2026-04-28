@@ -72,6 +72,33 @@ class Request {
   }
 
   Future<AppRelease?> getLatestRelease() async {
+    return getLatestReleaseForChannel(includePrerelease: false);
+  }
+
+  Future<List<AppRelease>> getReleases({int perPage = 100}) async {
+    final response = await dio
+        .get(
+          'https://api.github.com/repos/$repository/releases',
+          queryParameters: {'per_page': perPage},
+          options: Options(responseType: ResponseType.json),
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode != 200 || response.data is! List) {
+      return const [];
+    }
+    return (response.data as List)
+        .whereType<Map<String, dynamic>>()
+        .map(AppRelease.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<AppRelease?> getLatestReleaseForChannel({
+    required bool includePrerelease,
+  }) async {
+    if (includePrerelease) {
+      final releases = await getReleases();
+      return selectLatestRelease(releases, includePrerelease: true);
+    }
     final response = await dio
         .get(
           'https://api.github.com/repos/$repository/releases/latest',
@@ -84,9 +111,11 @@ class Request {
     return AppRelease.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<AppRelease?> checkForUpdate() async {
+  Future<AppRelease?> checkForUpdate({bool includePrerelease = false}) async {
     try {
-      final release = await getLatestRelease();
+      final release = await getLatestReleaseForChannel(
+        includePrerelease: includePrerelease,
+      );
       if (release == null) return null;
       final version = globalState.packageInfo.version;
       final hasUpdate =

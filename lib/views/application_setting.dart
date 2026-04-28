@@ -235,6 +235,29 @@ class AutoCheckUpdateItem extends ConsumerWidget {
   }
 }
 
+class IncludePrereleaseUpdatesItem extends ConsumerWidget {
+  const IncludePrereleaseUpdatesItem({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final includePrereleaseUpdates = ref.watch(
+      appSettingProvider.select((state) => state.includePrereleaseUpdates),
+    );
+    return ListItem.switchItem(
+      title: Text(appLocalizations.includePrereleaseUpdates),
+      subtitle: Text(appLocalizations.includePrereleaseUpdatesDesc),
+      delegate: SwitchDelegate(
+        value: includePrereleaseUpdates,
+        onChanged: (bool value) {
+          ref.read(appSettingProvider.notifier).update(
+            (state) => state.copyWith(includePrereleaseUpdates: value),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class ApplicationSettingView extends StatelessWidget {
   const ApplicationSettingView({super.key});
 
@@ -255,6 +278,7 @@ class ApplicationSettingView extends StatelessWidget {
       CloseConnectionsItem(),
       UsageItem(),
       AutoCheckUpdateItem(),
+      IncludePrereleaseUpdatesItem(),
     ];
     return BaseScaffold(
       title: appLocalizations.application,

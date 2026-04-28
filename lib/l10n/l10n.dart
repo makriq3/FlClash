@@ -424,6 +424,26 @@ class AppLocalizations {
     );
   }
 
+  /// `Pre-release updates`
+  String get includePrereleaseUpdates {
+    return Intl.message(
+      'Pre-release updates',
+      name: 'includePrereleaseUpdates',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Include pre-releases when checking for updates`
+  String get includePrereleaseUpdatesDesc {
+    return Intl.message(
+      'Include pre-releases when checking for updates',
+      name: 'includePrereleaseUpdatesDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `AccessControl`
   String get accessControl {
     return Intl.message(
