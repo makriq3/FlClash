@@ -17,6 +17,11 @@ IGNORED_SECTION_TITLES = {
     "загрузка",
     "артефакты",
     "контрольные суммы",
+    "верификация",
+    "проверка",
+    "проверки",
+    "технические детали",
+    "для разработчиков",
 }
 
 GENERIC_ITEM_PATTERNS = [
@@ -56,6 +61,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--summary-output",
         help="Optional plain-text file with a short release summary",
+    )
+    parser.add_argument(
+        "--tech-notes-dir",
+        default="docs/releases",
+        help="Directory with detailed technical release notes",
     )
     parser.add_argument(
         "--repo-url",
@@ -125,8 +135,8 @@ def is_ignored_section(section: Section) -> bool:
     return normalize_title(section.title) in IGNORED_SECTION_TITLES
 
 
-def build_highlights(sections: list[Section], limit: int = 4) -> list[str]:
-    highlights: list[str] = []
+def collect_release_items(sections: list[Section]) -> list[str]:
+    items: list[str] = []
     seen: set[str] = set()
 
     for section in sections:
@@ -139,84 +149,48 @@ def build_highlights(sections: list[Section], limit: int = 4) -> list[str]:
             candidate_key = candidate.casefold()
             if not candidate or candidate.endswith(":") or candidate_key in seen:
                 continue
-            highlights.append(candidate)
+            items.append(candidate)
             seen.add(candidate_key)
-            if len(highlights) >= limit:
-                return highlights
 
-    return highlights
+    return items
 
 
-def render_details(sections: list[Section]) -> list[str]:
-    lines: list[str] = []
-    for section in sections:
-        if is_ignored_section(section) or not section.items:
-            continue
-        if section.title:
-            lines.append(f"### {section.title}")
-            lines.append("")
-        for item in section.items:
-            lines.append(item if item.lstrip().startswith("- ") else f"- {item}")
-        lines.append("")
-    while lines and not lines[-1].strip():
-        lines.pop()
-    return lines
+def build_highlights(items: list[str], limit: int = 4) -> list[str]:
+    return items[:limit]
 
 
-def has_extra_details(sections: list[Section], highlights: list[str]) -> bool:
-    detail_items: list[str] = []
-    titled_sections = 0
-
-    for section in sections:
-        if is_ignored_section(section) or not section.items:
-            continue
-        if section.title:
-            titled_sections += 1
-        for item in section.items:
-            normalized_item = item.lstrip()
-            detail_items.append(
-                normalized_item[2:].strip()
-                if normalized_item.startswith("- ")
-                else normalized_item.strip(),
-            )
-
-    if not detail_items:
-        return False
-    if len(detail_items) > len(highlights):
-        return True
-    if titled_sections > 1:
-        return True
-    return detail_items != highlights[: len(detail_items)]
+def build_technical_notes_url(
+    repo_url: str,
+    tech_notes_dir: Path,
+    tag: str,
+    repo_root: Path,
+) -> str | None:
+    notes_path = tech_notes_dir / f"{tag}.md"
+    if not notes_path.exists():
+        return None
+    try:
+        relative_path = notes_path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        relative_path = Path("docs/releases") / f"{tag}.md"
+    return f"{repo_url}/blob/main/{relative_path.as_posix()}"
 
 
 def build_release_markdown(
     tag: str,
     repo_url: str,
-    highlights: list[str],
-    details: list[str],
+    items: list[str],
+    technical_notes_url: str | None,
 ) -> str:
-    version = tag[1:] if tag.startswith("v") else tag
-    lines = [f"# FlClash {version}", ""]
+    lines: list[str] = []
 
-    if highlights:
-        lines.extend(["## Главное", ""])
-        lines.extend(f"- {item}" for item in highlights)
-        lines.append("")
+    if items:
+        lines.extend(f"- {item}" for item in items)
 
-    if details:
-        lines.extend(["## Подробности", ""])
-        lines.extend(details)
-        lines.append("")
+    if technical_notes_url:
+        if lines:
+            lines.append("")
+        lines.append(f"Подробнее в [docs/releases/{tag}.md]({technical_notes_url})")
 
-    lines.extend(
-        [
-            "## Загрузка",
-            "",
-            "- Выберите артефакт для своей платформы в блоке Assets ниже.",
-            "- Контрольные суммы `*.sha256` приложены к релизу рядом с бинарниками.",
-            f"- Полная история изменений: [CHANGELOG.md]({repo_url}/blob/main/CHANGELOG.md)",
-        ]
-    )
     return "\n".join(lines).strip() + "\n"
 
 
@@ -232,9 +206,21 @@ def main() -> None:
     changelog_text = changelog_path.read_text(encoding="utf-8")
     block = extract_release_block(changelog_text, args.tag)
     sections = parse_sections(block)
-    highlights = build_highlights(sections)
-    details = render_details(sections) if has_extra_details(sections, highlights) else []
-    release_notes = build_release_markdown(args.tag, args.repo_url, highlights, details)
+    items = collect_release_items(sections)
+    highlights = build_highlights(items)
+    repo_root = changelog_path.resolve().parent
+    technical_notes_url = build_technical_notes_url(
+        args.repo_url,
+        Path(args.tech_notes_dir),
+        args.tag,
+        repo_root,
+    )
+    release_notes = build_release_markdown(
+        args.tag,
+        args.repo_url,
+        items,
+        technical_notes_url,
+    )
 
     output_path = Path(args.output)
     output_path.write_text(release_notes, encoding="utf-8")

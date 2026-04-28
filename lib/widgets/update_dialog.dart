@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/plugins/app.dart';
+import 'package:fl_clash/plugins/service.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/dialog.dart';
 import 'package:flutter/material.dart';
@@ -200,6 +202,7 @@ class _AndroidUpdateDialogState extends State<AndroidUpdateDialog> {
 
   Future<void> _openInstaller(String path) async {
     _setStage(_AndroidUpdateStage.installing);
+    await _stopVpnBeforeInstall();
     final opened = await app?.openFile(path) ?? false;
     if (!opened) {
       throw appLocalizations.updateInstallerError;
@@ -209,6 +212,33 @@ class _AndroidUpdateDialogState extends State<AndroidUpdateDialog> {
     }
     globalState.showNotifier(appLocalizations.updateInstallerOpened);
     Navigator.of(context).pop(true);
+  }
+
+  Future<void> _stopVpnBeforeInstall() async {
+    if (!system.isAndroid) {
+      return;
+    }
+    final runtimeBeforeInstall = await service?.getRunTime();
+    if (runtimeBeforeInstall == null) {
+      return;
+    }
+    commonPrint.log(
+      'Stopping Android VPN before launching in-app installer',
+    );
+    await service?.stop();
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      final runtime = await service?.getRunTime();
+      if (runtime == null) {
+        return;
+      }
+    }
+    commonPrint.log(
+      'Android VPN was still reported as active before installer launch; '
+      'continuing with best-effort update flow.',
+      logLevel: LogLevel.warning,
+    );
   }
 
   void _setStage(_AndroidUpdateStage stage) {

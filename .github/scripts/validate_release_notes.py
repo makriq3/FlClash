@@ -55,6 +55,29 @@ FORBIDDEN_PATTERNS = [
     re.compile(r"^исправлено:\s*ряд\s+(?:проблем|ошибок)$", re.IGNORECASE),
 ]
 
+FORBIDDEN_SECTION_TITLES = {
+    "верификация",
+    "проверка",
+    "проверки",
+    "ci",
+    "downloads",
+    "assets",
+    "checksums",
+    "технические детали",
+    "для разработчиков",
+    "подробности",
+}
+
+FORBIDDEN_CONTENT_PATTERNS = [
+    re.compile(r"`[^`]+`"),
+    re.compile(r"github actions", re.IGNORECASE),
+    re.compile(r"\bworkflow\b", re.IGNORECASE),
+    re.compile(r"\bpipeline\b", re.IGNORECASE),
+    re.compile(r"\bflutter analyze\b", re.IGNORECASE),
+    re.compile(r"\bflutter test\b", re.IGNORECASE),
+    re.compile(r"\bsha256\b", re.IGNORECASE),
+]
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -91,13 +114,30 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip())
 
 
+def normalize_heading(text: str) -> str:
+    return normalize(text).strip(":").casefold()
+
+
 def validate_block(lines: list[tuple[int, str]]) -> list[str]:
     errors: list[str] = []
     bullet_count = 0
 
     for line_no, raw_line in lines:
+        heading_match = re.match(r"^\s{0,3}#{3,6}\s+(.*\S)\s*$", raw_line)
+        if heading_match is not None:
+            heading = normalize_heading(heading_match.group(1))
+            if heading in FORBIDDEN_SECTION_TITLES:
+                errors.append(
+                    f"{line_no}: служебный или технический подзаголовок не должен попадать в пользовательский changelog: `{heading_match.group(1).strip()}`",
+                )
+            continue
+
         bullet_match = re.match(r"^\s*-\s+(.*\S)\s*$", raw_line)
         if bullet_match is None:
+            if raw_line.strip():
+                errors.append(
+                    f"{line_no}: в секции релиза допустимы только bullet-пункты без служебных абзацев: `{raw_line.strip()}`",
+                )
             continue
 
         bullet_count += 1
@@ -109,15 +149,22 @@ def validate_block(lines: list[tuple[int, str]]) -> list[str]:
             )
             continue
 
-        first_word_match = re.match(r"^([A-Za-zА-Яа-я-]+)", text)
-        if first_word_match is None:
-            continue
+        for pattern in FORBIDDEN_CONTENT_PATTERNS:
+            if pattern.search(text):
+                errors.append(
+                    f"{line_no}: пользовательский changelog не должен содержать служебные или технические маркеры: `{text}`",
+                )
+                break
+        else:
+            first_word_match = re.match(r"^([A-Za-zА-Яа-я-]+)", text)
+            if first_word_match is None:
+                continue
 
-        first_word = first_word_match.group(1).casefold()
-        if first_word in FORBIDDEN_FIRST_WORDS:
-            errors.append(
-                f"{line_no}: todo-формулировка в инфинитиве: `{text}`",
-            )
+            first_word = first_word_match.group(1).casefold()
+            if first_word in FORBIDDEN_FIRST_WORDS:
+                errors.append(
+                    f"{line_no}: todo-формулировка в инфинитиве: `{text}`",
+                )
 
     if bullet_count == 0:
         errors.append("В релизной секции нет ни одного bullet-пункта.")

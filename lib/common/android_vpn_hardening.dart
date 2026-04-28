@@ -616,7 +616,11 @@ Future<String> _readPackageListFromLocalSource(
       'Package list file for `$fieldName` is missing a valid local path.',
     );
   }
-  final resolvedPath = _resolvePackageListPath(rawPath, profilesPath);
+  final resolvedPath = _resolvePackageListPath(
+    rawPath,
+    profilesPath,
+    fieldName: fieldName,
+  );
   final file = File(resolvedPath);
   if (!await file.exists()) {
     throw FormatException(
@@ -669,10 +673,75 @@ Future<String> _readPackageListFromRemoteSource(
   }
 }
 
-String _resolvePackageListPath(String rawPath, String profilesPath) {
-  return path.normalize(
-    path.isAbsolute(rawPath) ? rawPath : path.join(profilesPath, rawPath),
+String _resolvePackageListPath(
+  String rawPath,
+  String profilesPath, {
+  required String fieldName,
+}) {
+  final normalizedProfilesPath = path.normalize(path.absolute(profilesPath));
+  final normalizedRawPath = rawPath.trim();
+  final resolvedPath = path.normalize(
+    path.isAbsolute(normalizedRawPath)
+        ? normalizedRawPath
+        : path.join(normalizedProfilesPath, normalizedRawPath),
   );
+  if (!_isPathWithinDirectory(resolvedPath, normalizedProfilesPath)) {
+    throw FormatException(
+      'Package list path for `$fieldName` must stay within the profiles '
+      'directory: $rawPath',
+    );
+  }
+  final canonicalProfilesPath =
+      _tryResolveCanonicalPath(normalizedProfilesPath) ?? normalizedProfilesPath;
+  final canonicalResolvedPath = _resolvePathAgainstExistingAncestor(resolvedPath);
+  if (!_isPathWithinDirectory(canonicalResolvedPath, canonicalProfilesPath)) {
+    throw FormatException(
+      'Package list path for `$fieldName` must stay within the profiles '
+      'directory: $rawPath',
+    );
+  }
+  return resolvedPath;
+}
+
+bool _isPathWithinDirectory(String pathValue, String directoryPath) {
+  return pathValue == directoryPath || path.isWithin(directoryPath, pathValue);
+}
+
+String _resolvePathAgainstExistingAncestor(String resolvedPath) {
+  final existingAncestor = _findExistingAncestor(resolvedPath);
+  if (existingAncestor == null) {
+    return resolvedPath;
+  }
+  final canonicalAncestor =
+      _tryResolveCanonicalPath(existingAncestor) ?? existingAncestor;
+  final relativeSuffix = path.relative(resolvedPath, from: existingAncestor);
+  return path.normalize(path.join(canonicalAncestor, relativeSuffix));
+}
+
+String? _findExistingAncestor(String pathValue) {
+  var current = path.normalize(pathValue);
+  while (true) {
+    if (FileSystemEntity.typeSync(current) != FileSystemEntityType.notFound) {
+      return current;
+    }
+    final parent = path.dirname(current);
+    if (parent == current) {
+      return null;
+    }
+    current = parent;
+  }
+}
+
+String? _tryResolveCanonicalPath(String pathValue) {
+  try {
+    return File(pathValue).resolveSymbolicLinksSync();
+  } catch (_) {
+    try {
+      return Directory(pathValue).resolveSymbolicLinksSync();
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 String _resolvePackageListCachePath(
@@ -689,7 +758,11 @@ String _resolvePackageListCachePath(
   }
   final rawPath = source.path?.trim();
   if (rawPath != null && rawPath.isNotEmpty) {
-    return _resolvePackageListPath(rawPath, profilesPath);
+    return _resolvePackageListPath(
+      rawPath,
+      profilesPath,
+      fieldName: fieldName,
+    );
   }
   if (profileId == null) {
     throw FormatException(

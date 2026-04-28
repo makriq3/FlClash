@@ -169,6 +169,7 @@ jobs:
           python3 .github/scripts/build_release_notes.py \
             --tag "${{ github.ref_name }}" \
             --repo-url "${{ github.server_url }}/${{ github.repository }}" \
+            --tech-notes-dir docs/releases \
             --output release.md \
             --summary-output release_summary.txt
 

@@ -13,6 +13,8 @@ class FilesProvider : DocumentsProvider() {
 
     companion object {
         private const val DEFAULT_ROOT_ID = "0"
+        private const val ROOT_DOCUMENT_ID = "root"
+        private const val DOCUMENT_ID_SEPARATOR = ":"
 
         private val DEFAULT_DOCUMENT_COLUMNS = arrayOf(
             DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -43,7 +45,7 @@ class FilesProvider : DocumentsProvider() {
                 add(DocumentsContract.Root.COLUMN_ICON, R.drawable.ic_service)
                 add(DocumentsContract.Root.COLUMN_TITLE, "FlClash")
                 add(DocumentsContract.Root.COLUMN_SUMMARY, "Data")
-                add(DocumentsContract.Root.COLUMN_DOCUMENT_ID, "/")
+                add(DocumentsContract.Root.COLUMN_DOCUMENT_ID, ROOT_DOCUMENT_ID)
             }
         }
     }
@@ -55,20 +57,23 @@ class FilesProvider : DocumentsProvider() {
         sortOrder: String?
     ): Cursor {
         val result = MatrixCursor(resolveDocumentProjection(projection))
-        val parentFile = if (parentDocumentId == "/") {
-            context?.filesDir
-        } else {
-            File(parentDocumentId)
-        } ?: throw FileNotFoundException("Parent directory not found")
+        val parentFile = resolveDocumentFile(parentDocumentId)
+        if (!parentFile.isDirectory) {
+            throw FileNotFoundException("Parent directory not found")
+        }
         parentFile.listFiles()?.forEach { file ->
-            includeFile(result, file)
+            try {
+                includeFile(result, file)
+            } catch (_: FileNotFoundException) {
+                // Skip entries that resolve outside the provider root.
+            }
         }
         return result
     }
 
     override fun queryDocument(documentId: String, projection: Array<String>?): Cursor {
         val result = MatrixCursor(resolveDocumentProjection(projection))
-        val file = File(documentId)
+        val file = resolveDocumentFile(documentId)
         includeFile(result, file)
         return result
     }
@@ -78,14 +83,24 @@ class FilesProvider : DocumentsProvider() {
         mode: String,
         signal: CancellationSignal?
     ): ParcelFileDescriptor {
-        val file = File(documentId)
+        val file = resolveDocumentFile(documentId)
         val accessMode = ParcelFileDescriptor.parseMode(mode)
         return ParcelFileDescriptor.open(file, accessMode)
     }
 
+    override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean {
+        return try {
+            val parentFile = resolveDocumentFile(parentDocumentId)
+            val documentFile = resolveDocumentFile(documentId)
+            documentFile == parentFile || documentFile.path.startsWith("${parentFile.path}${File.separator}")
+        } catch (_: FileNotFoundException) {
+            false
+        }
+    }
+
     private fun includeFile(result: MatrixCursor, file: File) {
         result.newRow().apply {
-            add(DocumentsContract.Document.COLUMN_DOCUMENT_ID, file.absolutePath)
+            add(DocumentsContract.Document.COLUMN_DOCUMENT_ID, resolveDocumentId(file))
             add(DocumentsContract.Document.COLUMN_DISPLAY_NAME, file.name)
             add(DocumentsContract.Document.COLUMN_SIZE, file.length())
             add(
@@ -106,5 +121,45 @@ class FilesProvider : DocumentsProvider() {
 
     private fun resolveDocumentProjection(projection: Array<String>?): Array<String> {
         return projection ?: DEFAULT_DOCUMENT_COLUMNS
+    }
+
+    private fun resolveBaseDirectory(): File {
+        return context?.filesDir?.canonicalFile
+            ?: throw FileNotFoundException("Base directory not found")
+    }
+
+    private fun resolveDocumentFile(documentId: String): File {
+        val baseDirectory = resolveBaseDirectory()
+        if (documentId == ROOT_DOCUMENT_ID) {
+            return baseDirectory
+        }
+        val prefix = "$ROOT_DOCUMENT_ID$DOCUMENT_ID_SEPARATOR"
+        if (!documentId.startsWith(prefix)) {
+            throw FileNotFoundException("Document not found")
+        }
+        val relativePath = documentId.removePrefix(prefix)
+        if (relativePath.isBlank()) {
+            return baseDirectory
+        }
+        val file = File(baseDirectory, relativePath).canonicalFile
+        val isWithinBaseDirectory =
+            file == baseDirectory || file.path.startsWith("${baseDirectory.path}${File.separator}")
+        if (!isWithinBaseDirectory || !file.exists()) {
+            throw FileNotFoundException("Document not found")
+        }
+        return file
+    }
+
+    private fun resolveDocumentId(file: File): String {
+        val baseDirectory = resolveBaseDirectory()
+        val canonicalFile = file.canonicalFile
+        if (canonicalFile == baseDirectory) {
+            return ROOT_DOCUMENT_ID
+        }
+        val prefix = "${baseDirectory.path}${File.separator}"
+        if (!canonicalFile.path.startsWith(prefix)) {
+            throw FileNotFoundException("Document not found")
+        }
+        return "$ROOT_DOCUMENT_ID$DOCUMENT_ID_SEPARATOR${canonicalFile.path.removePrefix(prefix)}"
     }
 }

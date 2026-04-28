@@ -232,6 +232,71 @@ org.telegram.messenger
   );
 
   test(
+    'android profile split tunneling rejects local package list paths outside profiles path',
+    () async {
+      final profilesDir = await Directory.systemTemp.createTemp(
+        'flclash-outside-local-',
+      );
+      addTearDown(() async {
+        await profilesDir.delete(recursive: true);
+      });
+
+      await expectLater(
+        () => normalizeAndroidProfileAccessControlConfig(
+          {
+            'tun': {
+              'include-package-file': '../outside.txt',
+            },
+          },
+          isAndroid: true,
+          profilesPath: profilesDir.path,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
+    'android profile split tunneling rejects remote cache paths outside profiles path',
+    () async {
+      final profilesDir = await Directory.systemTemp.createTemp(
+        'flclash-outside-remote-',
+      );
+      addTearDown(() async {
+        await profilesDir.delete(recursive: true);
+      });
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(server.close);
+      server.listen((request) async {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..write('com.termux\n');
+        await request.response.close();
+      });
+
+      await expectLater(
+        () => normalizeAndroidProfileAccessControlConfig(
+          {
+            'tun': {
+              'include-package-file': [
+                {
+                  'url':
+                      'http://${server.address.address}:${server.port}/allow.txt',
+                  'path': '../outside-cache.txt',
+                },
+              ],
+            },
+          },
+          isAndroid: true,
+          profilesPath: profilesDir.path,
+          profileId: 99,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
     'android profile split tunneling rejects missing package list files',
     () async {
       await expectLater(

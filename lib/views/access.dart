@@ -405,8 +405,8 @@ class _AccessViewState extends ConsumerState<AccessView> {
   Widget _buildProfileManagedBanner() {
     return MaterialBanner(
       content: const Text(
-        'This Android split tunneling configuration is currently managed by '
-        'the active profile YAML.',
+        'Эта настройка раздельного туннелирования Android сейчас '
+        'управляется через YAML активного профиля.',
       ),
       actions: [
         TextButton(
