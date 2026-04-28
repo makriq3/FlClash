@@ -712,7 +712,11 @@ extension SetupControllerExt on AppController {
     if (scriptContent?.isNotEmpty == true) {
       rawConfig = await globalState.handleEvaluate(scriptContent!, rawConfig);
     }
-    final installedPackageNames = system.isAndroid
+    final installedPackageNames =
+        shouldRequestInstalledPackageAccessForAndroidProfile(
+          rawConfig,
+          isAndroid: system.isAndroid,
+        )
         ? (await getPackages()).map((item) => item.packageName).toList()
         : const <String>[];
     rawConfig = await normalizeAndroidProfileAccessControlConfig(

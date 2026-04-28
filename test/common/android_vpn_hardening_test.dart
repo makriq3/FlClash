@@ -295,6 +295,45 @@ org.telegram.messenger
   });
 
   test(
+    'android profile split tunneling requests installed package access only for dynamic selectors',
+    () {
+      expect(
+        shouldRequestInstalledPackageAccessForAndroidProfile(
+          {
+            'tun': {
+              'exclude-package': ['com.termux'],
+            },
+          },
+          isAndroid: true,
+        ),
+        isFalse,
+      );
+      expect(
+        shouldRequestInstalledPackageAccessForAndroidProfile(
+          {
+            'tun': {
+              'exclude-package': ['*.yandex.*'],
+            },
+          },
+          isAndroid: true,
+        ),
+        isTrue,
+      );
+      expect(
+        shouldRequestInstalledPackageAccessForAndroidProfile(
+          {
+            'tun': {
+              'exclude-package-file': ['lists/apps.txt'],
+            },
+          },
+          isAndroid: true,
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'android profile split tunneling expands masks regex and exceptions against installed packages',
     () async {
       const installedPackageNames = [
@@ -376,19 +415,51 @@ com.termux
   );
 
   test(
-    'android profile split tunneling rejects dynamic selectors without installed package metadata',
+    'android profile split tunneling ignores dynamic selectors without installed package metadata',
     () {
-      expect(
-        () => resolveAndroidProfileAccessControlOverride(
-          {
-            'tun': {
-              'exclude-package': ['*.yandex.*'],
-            },
+      final resolved = resolveAndroidProfileAccessControlOverride(
+        {
+          'tun': {
+            'exclude-package': ['*.yandex.*'],
           },
-          isAndroid: true,
-        ),
-        throwsFormatException,
+        },
+        isAndroid: true,
       );
+
+      expect(resolved, isNull);
+    },
+  );
+
+  test(
+    'android profile split tunneling keeps exact selectors when installed package metadata is unavailable',
+    () {
+      final resolved = resolveAndroidProfileAccessControlOverride(
+        {
+          'tun': {
+            'exclude-package': ['com.termux', '*.yandex.*', '!com.termux'],
+          },
+        },
+        isAndroid: true,
+      );
+
+      expect(resolved, isNull);
+    },
+  );
+
+  test(
+    'android profile split tunneling keeps exact selectors without installed package metadata',
+    () {
+      final resolved = resolveAndroidProfileAccessControlOverride(
+        {
+          'tun': {
+            'include-package': ['com.termux', '*.yandex.*'],
+          },
+        },
+        isAndroid: true,
+      );
+
+      expect(resolved?.mode, AccessControlMode.acceptSelected);
+      expect(resolved?.acceptList, ['com.termux']);
     },
   );
 

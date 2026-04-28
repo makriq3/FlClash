@@ -18,6 +18,35 @@ bool shouldApplyAndroidVpnHardening({
   return isAndroid && vpnEnabled;
 }
 
+bool shouldRequestInstalledPackageAccessForAndroidProfile(
+  Map<String, dynamic> rawConfig, {
+  required bool isAndroid,
+}) {
+  if (!isAndroid) {
+    return false;
+  }
+
+  final tun = _asStringKeyedMap(rawConfig['tun']);
+  final inlineSelectors = [
+    ..._asPackageSelectorList(
+      tun['include-package'],
+      fieldName: 'tun.include-package',
+    ),
+    ..._asPackageSelectorList(
+      tun['exclude-package'],
+      fieldName: 'tun.exclude-package',
+    ),
+  ];
+  if (inlineSelectors.any(_selectorNeedsInstalledPackageAccess)) {
+    return true;
+  }
+
+  return tun['include-package-file'] != null ||
+      tun['exclude-package-file'] != null ||
+      tun['include-package-url'] != null ||
+      tun['exclude-package-url'] != null;
+}
+
 Future<Map<String, dynamic>> normalizeAndroidProfileAccessControlConfig(
   Map<String, dynamic> rawConfig, {
   required bool isAndroid,
@@ -748,19 +777,23 @@ List<String> _resolvePackageSelectors(
   ).toList();
 
   if (normalizedInstalledPackages.isEmpty) {
-    final hasDynamicSelectors = compiledSelectors.any(
-      (selector) => selector.isDynamic,
-    );
-    if (hasDynamicSelectors) {
-      throw FormatException(
-        'Profile field `$fieldName` uses package masks, regular expressions, '
-        'or negated rules, but no installed Android package list is '
-        'available to resolve them.',
-      );
+    final resolvedPackages = <String>{};
+    for (final selector in compiledSelectors) {
+      if (selector.requiresInstalledPackageScan) {
+        commonPrint.log(
+          'Android package selector `${selector.raw}` in `$fieldName` was '
+          'ignored because no installed applications list is available.',
+          logLevel: LogLevel.warning,
+        );
+        continue;
+      }
+      if (selector.include) {
+        resolvedPackages.add(selector.pattern);
+      } else {
+        resolvedPackages.remove(selector.pattern);
+      }
     }
-    return LinkedHashSet<String>.from(
-      compiledSelectors.map((selector) => selector.pattern),
-    ).toList();
+    return resolvedPackages.toList();
   }
 
   final matchCounters = List<int>.filled(compiledSelectors.length, 0);
@@ -881,13 +914,13 @@ final class _CompiledPackageSelector {
     required this.pattern,
     required this.include,
     required this.matcher,
-    required this.isDynamic,
+    required this.requiresInstalledPackageScan,
   });
 
   final String raw;
   final String pattern;
   final bool include;
-  final bool isDynamic;
+  final bool requiresInstalledPackageScan;
   final bool Function(String packageName) matcher;
 
   bool matches(String packageName) => matcher(packageName);
@@ -914,7 +947,7 @@ final class _CompiledPackageSelector {
           raw: normalized,
           pattern: selectorBody,
           include: !isNegated,
-          isDynamic: true,
+          requiresInstalledPackageScan: true,
           matcher: regex.hasMatch,
         );
       } catch (error) {
@@ -933,7 +966,7 @@ final class _CompiledPackageSelector {
         raw: normalized,
         pattern: selectorBody,
         include: !isNegated,
-        isDynamic: true,
+        requiresInstalledPackageScan: true,
         matcher: glob.hasMatch,
       );
     }
@@ -942,7 +975,7 @@ final class _CompiledPackageSelector {
       raw: normalized,
       pattern: selectorBody,
       include: !isNegated,
-      isDynamic: isNegated,
+      requiresInstalledPackageScan: false,
       matcher: (packageName) => packageName == selectorBody,
     );
   }
@@ -955,6 +988,17 @@ String? _extractRegexBody(String selector) {
     }
   }
   return null;
+}
+
+bool _selectorNeedsInstalledPackageAccess(String rawSelector) {
+  final normalized = rawSelector.trim();
+  if (normalized.isEmpty) {
+    return false;
+  }
+  final selectorBody = normalized.startsWith('!')
+      ? normalized.substring(1).trim()
+      : normalized;
+  return selectorBody.contains('*') || _extractRegexBody(selectorBody) != null;
 }
 
 class _PackageListSource {
