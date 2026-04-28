@@ -1,1053 +1,1068 @@
+## v0.8.98
+
+### Окно обновления Android
+
+- Переработать окно обновления вокруг трёх явных действий: `Позже`, `Пропустить релиз`, `Скачать и установить`.
+- Сохранять пропуск только для конкретного тега релиза, не отключая автопроверку обновлений целиком.
+- Выравнять поведение ручной и автоматической проверки, чтобы окно обновления было предсказуемым для обычного пользователя.
+
+## v0.8.97
+
+### Репозиторий и релизный канал
+
+- Репозиторий переведён на единый основной бранч `main` без оставшихся веток, унаследованных от апстрима.
+- Русифицирована публичная поверхность проекта: документация, issue templates, workflow-имена и release-метаданные.
+- Релизный канал и самообновление теперь опираются на одну поддерживаемую самостоятельную линию `makriq`.
+
 ## v0.8.96
 
-### Production Identity Cleanup
+### Финальная очистка продуктовой идентичности
 
-- Fix Android native `JNI` bindings so the renamed `com.makriq.flclash` package works end-to-end at runtime.
-- Remove the last old vendor metadata from the Windows release manifest and publish desktop binaries as `FlClash`.
-- Drop unused Firebase entries from the Android version catalog after removing Google Services integration from the product line.
+- Исправить Android native `JNI` bindings, чтобы переименованный пакет `com.makriq.flclash` корректно работал во всём runtime-контуре.
+- Убрать последние старые vendor-метаданные из Windows release manifest и публиковать desktop-бинарники уже как `FlClash`.
+- Удалить неиспользуемые Firebase-записи из Android version catalog после вырезания Google Services из продуктовой линии.
 
 ## v0.8.95
 
-### Product Identity And Release Independence
+### Независимая идентичность продукта и релизов
 
-- Move Android and desktop bundle identifiers to the independent `makriq` namespace.
-- Remove upstream project links from the app UI, packaging metadata, and release helpers.
-- Update Windows, Linux, and macOS packaging metadata so releases are published as a standalone product line.
+- Перенести Android и desktop bundle identifiers в независимое пространство имён `makriq`.
+- Удалить ссылки на апстрим из интерфейса приложения, packaging metadata и вспомогательных скриптов релиза.
+- Обновить packaging metadata для Windows, Linux и macOS, чтобы релизы публиковались как самостоятельная продуктовая линия.
 
-### Android Release Reliability
+### Надёжность Android-релизов
 
-- Remove Firebase / Google Services coupling from Android builds so package renaming does not block stable releases.
-- Keep Android signing-based production releases while dropping the old `google-services.json` dependency.
-- Switch remaining Git-hosted upstream dependencies to neutral `pub.dev` packages where available.
+- Убрать связку с Firebase / Google Services из Android-сборок, чтобы переименование package id не блокировало стабильные релизы.
+- Сохранить продовые Android-релизы с подписью, но избавиться от старой зависимости на `google-services.json`.
+- Перевести оставшиеся Git-hosted зависимости из апстрима на нейтральные пакеты с `pub.dev`, где это возможно.
 
 ## v0.8.94
 
-### Android Routing And Security Follow-Up
+### Доработка Android-маршрутизации и защиты
 
-- Fix the Android routing regression introduced by the initial localhost hardening rollout.
-- Restore correct direct routing for domain-based Android rules on the hardened TUN path without reopening localhost proxy exposure.
-- Enable Android VPN domain recovery on the hardened TUN path through safe `sniffer` augmentation for `http`, `tls`, and `quic`.
-- Translate compatible Android `bypassDomain` entries into top-priority Clash `DIRECT` rules during hardened Android VPN profile generation.
+- Исправить регрессию Android-маршрутизации, появившуюся после первой волны защиты localhost.
+- Восстановить корректную прямую маршрутизацию для доменных Android-правил на усиленном TUN-пути без повторного открытия локального прокси на localhost.
+- Включить восстановление доменной маршрутизации Android VPN на усиленном TUN-пути через безопасный `sniffer` для `http`, `tls` и `quic`.
+- Преобразовать совместимые значения Android `bypassDomain` в приоритетные правила Clash `DIRECT` во время генерации усиленного Android VPN-профиля.
 
-### Runtime Hardening Consistency
+### Согласованность runtime-защиты
 
-- Keep Android localhost listener hardening active not only during profile setup, but also during live runtime `updateConfig(...)` refreshes.
-- Prevent runtime config sync from reopening `mixed-port`, `port`, `socks-port`, `redir-port`, `tproxy-port`, `allow-lan`, or `external-controller` while Android VPN hardening is active.
-- Preserve resolved Android TUN routing semantics, including `route-address` handling and `RouteMode.bypassPrivate`, through the same shared runtime hardening path.
+- Удерживать защиту Android localhost listeners не только на этапе настройки профиля, но и во время обновления `updateConfig(...)` на лету.
+- Не позволять синхронизации runtime-конфига повторно открывать `mixed-port`, `port`, `socks-port`, `redir-port`, `tproxy-port`, `allow-lan` или `external-controller`, пока активна защита Android.
+- Сохранять согласованную семантику Android TUN-маршрутизации, включая обработку `route-address` и `RouteMode.bypassPrivate`, через единый runtime-путь защиты.
 
-### Regression Coverage And Release Safety
+### Регрессионное покрытие и безопасность релизов
 
-- Add targeted regression coverage for the routing and security conflict that appeared after `v0.8.93`.
-- Add tests for:
-  - hardened Android runtime config closure of local listeners,
-  - Android TUN routing under `RouteMode.bypassPrivate`,
-  - platform-stable TUN resolution in CI and Android runtime,
-  - preserving explicit `sniffer` settings while still enforcing hardened domain recovery.
-- Update repository documentation to describe the final Android hardening model: runtime hardening, restored routing correctness, and anti-regression safeguards.
+- Добавить прицельное регрессионное покрытие для конфликта маршрутизации и защиты, проявившегося после `v0.8.93`.
+- Добавить тесты для:
+  - закрытия локальных listeners в усиленном Android runtime-конфиге,
+  - Android TUN-маршрутизации при `RouteMode.bypassPrivate`,
+  - платформенно-стабильного разрешения TUN в CI и Android runtime,
+  - сохранения явных настроек `sniffer` при одновременном принудительном восстановлении доменной маршрутизации.
+- Обновить документацию репозитория так, чтобы она описывала финальную модель защиты Android: runtime-защиту, восстановленную корректность маршрутизации и анти-регрессионные предохранители.
 
 ## v0.8.93
 
-### Android VPN Hardening
+### Защита Android VPN
 
-- Add an Android-only hardening layer that rewrites generated Clash runtime config in VPN mode.
-- Force all local inbound listener ports closed in Android VPN mode:
+- Добавить Android-only слой защиты, который переписывает сгенерированную Clash runtime-конфигурацию в VPN-режиме.
+- Принудительно закрыть все локальные inbound listener-порты в Android VPN-режиме:
   - `port=0`
   - `socks-port=0`
   - `mixed-port=0`
   - `redir-port=0`
   - `tproxy-port=0`
-- Force `external-controller=''` and keep `allow-lan=false` in hardened Android VPN mode.
-- Stop app-owned Android requests from depending on localhost mixed proxy while VPN mode is active.
+- Принудительно выставлять `external-controller=''` и удерживать `allow-lan=false` в усиленном Android VPN-режиме.
+- Перестать завязывать собственные Android-запросы приложения на localhost mixed proxy при активном VPN.
 
-### Fingerprint Reduction
+### Снижение распознаваемости
 
-- Randomize Android tunnel IPv4 and IPv6 addresses on each VPN start.
-- Replace the static `VpnService` session label with a neutral `VPN` label.
+- Рандомизировать IPv4 и IPv6 адреса Android-туннеля при каждом запуске VPN.
+- Заменить статичный `VpnService` session label на нейтральный `VPN`.
 
-### Verification And Release Automation
+### Верификация и автоматизация релизов
 
-- Add Android VPN hardening regression tests.
-- Add a dedicated branch Android build workflow for GitHub Actions.
-- Update the main release workflow so this fork can build and publish from its own repository context.
-- Make Android signing setup conditional on repository secrets to simplify fork maintenance.
+- Добавить регрессионные тесты для защиты Android VPN.
+- Добавить отдельный веточный Android workflow сборки для GitHub Actions.
+- Обновить основной workflow релиза так, чтобы этот форк мог собираться и публиковаться из собственного репозиторного контекста.
+- Сделать настройку подписи Android условной по секретам репозитория, чтобы сопровождение форка было проще.
 
-### Repository Independence
+### Независимость репозитория
 
-- Rewrite the main README around this fork's privacy-hardening goals.
-- Add in-repository Android VPN hardening research and security documentation.
-- Update release metadata and templates so this fork no longer depends on upstream branding or infrastructure assumptions.
+- Переписать основной README вокруг целей этого форка по усилению приватности.
+- Добавить в репозиторий исследование защиты Android VPN и документацию по безопасности.
+- Обновить метаданные релизов и шаблоны так, чтобы форк больше не зависел от апстримного брендинга и инфраструктурных предположений.
 
 ## v0.8.92
 
-- Add sqlite store
+- Добавить sqlite-хранилище
 
-- Optimize android quick action
+- Улучшить быстрые действия Android
 
-- Optimize backup and restore
+- Улучшить резервное копирование и восстановление
 
-- Optimize more details
+- Доработать детали
 
 ## v0.8.91
 
-- Fix windows some issues
+- Исправить ряд проблем на Windows
 
-- Optimize overwrite handle
+- Улучшить обработку перезаписи
 
-- Optimize access control page
+- Улучшить страницу управления доступом
 
-- Optimize some details
+- Доработать отдельные детали
 
 ## v0.8.90
 
-- Fix android tile service
+- Исправить Android tile service
 
-- Support append system DNS
+- Добавить поддержку добавления system DNS
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.89
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Optimize Windows service mode
+- Улучшить Windows service mode
 
-- Update core
+- Обновить core
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.88
 
-- Add android separates the core process
+- Добавить отдельный процесс Android core
 
-- Support core status check and force restart
+- Добавить проверку состояния core и принудительный рестарт
 
-- Optimize proxies page and access page
+- Улучшить страницу прокси и страницу доступа
 
-- Update flutter and pub dependencies
+- Обновить Flutter и pub-зависимости
 
-- Update go version
+- Обновить версию Go
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.87
 
-- Optimize desktop view
+- Улучшить десктопный интерфейс
 
-- Optimize logs, requests, connection pages
+- Улучшить страницы логов, запросов и соединений
 
-- Optimize windows tray auto hide
+- Улучшить автоскрытие иконки в Windows tray
 
-- Optimize some details
+- Доработать отдельные детали
 
-- Update core
+- Обновить core
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.86
 
-- Fix windows tun issues
+- Исправить проблемы Windows TUN
 
-- Optimize android get system dns
+- Улучшить получение системного DNS на Android
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.85
 
-- Support override script
+- Добавить поддержку override-скриптов
 
-- Support proxies search
+- Добавить поиск по прокси
 
-- Support svg display
+- Добавить поддержку отображения SVG
 
-- Optimize config persistence
+- Улучшить сохранение конфигурации
 
-- Add some scenes auto close connections
+- Добавить сценарии с автоматическим закрытием соединений
 
-- Update core
+- Обновить core
 
-- Optimize more details
+- Доработать дополнительные детали
 
 ## v0.8.84
 
-- Fix windows service verify issues
+- Исправить проблемы проверки Windows service
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.83
 
-- Add windows server mode start process verify
+- Добавить проверку запуска процесса в Windows server mode
 
-- Add linux deb dependencies
+- Добавить зависимости для Linux deb
 
-- Add backup recovery strategy select
+- Добавить выбор стратегии восстановления из резервной копии
 
-- Support custom text scaling
+- Добавить поддержку пользовательского масштаба текста
 
-- Optimize the display of different text scale
+- Улучшить отображение при разном масштабе текста
 
-- Optimize windows setup experience
+- Улучшить сценарий установки в Windows
 
-- Optimize startTun performance
+- Улучшить производительность startTun
 
-- Optimize android tv experience
+- Улучшить работу на Android TV
 
-- Optimize default option
+- Улучшить параметры по умолчанию
 
-- Optimize computed text size
+- Улучшить вычисление размера текста
 
-- Optimize hyperOS freeform window
+- Улучшить окно свободной формы в HyperOS
 
-- Add developer mode
+- Добавить режим разработчика
 
-- Update core
+- Обновить core
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Add issues template
+- Добавить шаблоны issues
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.82
 
-- Optimize android vpn performance
+- Улучшить производительность Android VPN
 
-- Add custom primary color and color scheme
+- Добавить пользовательский основной цвет и цветовую схему
 
-- Add linux nad windows arm release
+- Добавить Linux- и Windows-релизы для ARM
 
-- Optimize requests and logs page
+- Улучшить страницы запросов и логов
 
-- Fix map input page delete issues
+- Исправить удаление на странице map input
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.81
 
-- Add rule override
+- Добавить override для правил
 
-- Update core
+- Обновить core
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.80
 
-- Optimize dashboard performance
+- Улучшить производительность панели управления
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Fix unselected proxy group delay issues
+- Исправить задержки в невыбранной группе прокси
 
-- Fix asn url issues
+- Исправить проблемы с URL ASN
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.79
 
-- Fix tab delay view issues
+- Исправить отображение задержки на вкладке
 
-- Fix tray action issues
+- Исправить действия в tray
 
-- Fix get profile redirect client ua issues
+- Исправить redirect client UA при получении профиля
 
-- Fix proxy card delay view issues
+- Исправить отображение задержки на карточке прокси
 
-- Add Russian, Japanese adaptation
+- Добавить адаптацию для русского и японского языков
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.78
 
-- Fix list form input view issues
+- Исправить отображение ввода в списочной форме
 
-- Fix traffic view issues
+- Исправить проблемы отображения трафика
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.77
 
-- Optimize performance
+- Улучшить производительность
 
-- Update core
+- Обновить core
 
-- Optimize core stability
+- Улучшить стабильность core
 
-- Fix linux tun authority check error
+- Исправить ошибку проверки прав Linux TUN
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Fix scroll physics error
+- Исправить ошибку scroll physics
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.75
 
-- Add windows storage corruption detection
+- Добавить определение повреждения хранилища Windows
 
-- Fix core crash caused by windows resource manager restart
+- Исправить падение core после перезапуска Windows Resource Manager
 
-- Optimize logs, requests, access to pages
+- Улучшить логи, запросы и страницы доступа
 
-- Fix macos bypass domain issues
+- Исправить проблемы bypass domain на macOS
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.74
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.73
 
-- Update popup menu
+- Обновить всплывающее меню
 
-- Add file editor
+- Добавить редактор файлов
 
-- Fix android service issues
+- Исправить проблемы Android service
 
-- Optimize desktop background performance
+- Улучшить производительность фона на десктопе
 
-- Optimize android main process performance
+- Улучшить производительность главного процесса Android
 
-- Optimize delay test
+- Улучшить тест задержки
 
-- Optimize vpn protect
+- Улучшить VPN protect
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.72
 
-- Update core
+- Обновить core
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.71
 
-- Remake dashboard
+- Переделать панель управления
 
-- Optimize theme
+- Улучшить тему
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Update flutter version
+- Обновить версию Flutter
 
-- Update changelog
+- Обновить changelog
 
 ## v0.8.70
 
-- Support better window position memory
+- Улучшить запоминание позиции окна
 
-- Add windows arm64 and linux arm64 build script
+- Добавить скрипт сборки для Windows arm64 и Linux arm64
 
-- Optimize some details
+- Доработать некоторые детали
 
 ## v0.8.69
 
-- Remake desktop
+- Переделать десктопный интерфейс
 
-- Optimize change proxy
+- Улучшить смену прокси
 
-- Optimize network check
+- Улучшить проверку сети
 
-- Fix fallback issues
+- Исправить проблемы fallback
 
-- Optimize lots of details
+- Доработать множество деталей
 
-- Update change.yaml
+- Обновить change.yaml
 
-- Fix android tile issues
+- Исправить проблемы Android tile
 
-- Fix windows tray issues
+- Исправить проблемы Windows tray
 
-- Support setting bypassDomain
+- Добавить настройку bypassDomain
 
-- Update flutter version
+- Обновить версию Flutter
 
-- Fix android service issues
+- Исправить проблемы Android service
 
-- Fix macos dock exit button issues
+- Исправить кнопку выхода в dock на macOS
 
-- Add route address setting
+- Добавить настройку route address
 
-- Optimize provider view
+- Улучшить отображение провайдеров
 
-- Update changelog
+- Обновить changelog
 
-- Update CHANGELOG.md
+- Обновить CHANGELOG.md
 
 ## v0.8.67
 
-- Add android shortcuts
+- Добавить ярлыки Android
 
-- Fix init params issues
+- Исправить проблемы init params
 
-- Fix dynamic color issues
+- Исправить проблемы dynamic color
 
-- Optimize navigator animate
+- Улучшить анимацию навигации
 
-- Optimize window init
+- Улучшить инициализацию окна
 
-- Optimize fab
+- Улучшить FAB
 
-- Optimize save
+- Улучшить сохранение
 
 ## v0.8.66
 
-- Fix the collapse issues
+- Исправить проблемы сворачивания
 
-- Add fontFamily options
+- Добавить параметры семейства шрифтов
 
 ## v0.8.65
 
-- Update core version
+- Обновить версию core
 
-- Update flutter version
+- Обновить версию Flutter
 
-- Optimize ip check
+- Улучшить проверку IP
 
-- Optimize url-test
+- Улучшить url-test
 
 ## v0.8.64
 
-- Update release message
+- Обновить сообщение релиза
 
-- Init auto gen changelog
+- Инициализировать автогенерацию changelog
 
-- Fix windows tray issues
+- Исправить проблемы Windows tray
 
-- Fix urltest issues
+- Исправить проблемы urltest
 
-- Add auto changelog
+- Добавить автогенерацию changelog
 
-- Fix windows admin auto launch issues
+- Исправить автозапуск от администратора в Windows
 
-- Add android vpn options
+- Добавить параметры Android VPN
 
-- Support proxies icon configuration
+- Добавить настройку иконок прокси
 
-- Optimize android immersion display
+- Улучшить immersive-режим на Android
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Optimize ip detection
+- Улучшить определение IP
 
-- Support android vpn ipv6 inbound switch
+- Добавить переключатель Android VPN IPv6 inbound
 
-- Support log export
+- Добавить экспорт логов
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Fix android system dns issues
+- Исправить проблемы Android system DNS
 
-- Optimize dns default option
+- Улучшить DNS-параметры по умолчанию
 
-- Fix some issues
+- Исправить ряд проблем
 
-- Update readme
+- Обновить README
 
 ## v0.8.60
 
-- Fix build error2
+- Исправить ошибку сборки 2
 
-- Fix build error
+- Исправить ошибку сборки
 
-- Support desktop hotkey
+- Добавить поддержку десктопных горячих клавиш
 
-- Support android ipv6 inbound
+- Добавить поддержку Android IPv6 inbound
 
-- Support android system dns
+- Добавить поддержку Android system DNS
 
-- fix some bugs
+- Исправить ряд ошибок
 
 ## v0.8.59
 
-- Fix delete profile error
+- Исправить ошибку удаления профиля
 
 ## v0.8.58
 
-- Fix submit error 2
+- Исправить ошибку отправки 2
 
-- Fix submit error
+- Исправить ошибку отправки
 
-- Optimize DNS strategy
+- Улучшить стратегию DNS
 
-- Fix the problem that the tray is not displayed in some cases
+- Исправить случаи, когда tray не отображается
 
-- Optimize tray
+- Улучшить системный трей
 
-- Update core
+- Обновить core
 
-- Fix some error
+- Исправить отдельные ошибки
 
 ## v0.8.57
 
-- Fix tun update issues
+- Исправить проблемы обновления TUN
 
-- Add DNS override
-- Fixed some bugs
-- Optimize more detail
+- Добавить DNS override
+- Исправить ряд ошибок
+- Доработать дополнительные детали
 
-- Add Hosts override
+- Добавить Hosts override
 
 ## v0.8.56
 
-- fix android tip error
-- fix windows auto launch error
+- Исправить ошибку Android tip
+- Исправить ошибку автозапуска в Windows
 
 ## v0.8.55
 
-- Fix windows tray issues
+- Исправить проблемы Windows tray
 
-- Optimize windows logic
+- Улучшить логику Windows
 
-- Optimize app logic
+- Улучшить логику приложения
 
-- Support windows administrator auto launch
+- Добавить автозапуск от администратора в Windows
 
-- Support android close vpn
+- Добавить возможность закрыть VPN на Android
 
 ## v0.8.53
 
-- Change flutter version
+- Изменить версию Flutter
 
-- Support profiles sort
+- Добавить сортировку профилей
 
-- Support windows country flags display
+- Добавить отображение флагов стран в Windows
 
-- Optimize proxies page and profiles page columns
+- Улучшить колонки на страницах прокси и профилей
 
 ## v0.8.52
 
-- Update flutter version
+- Обновить версию Flutter
 
-- Update version
+- Обновить версию
 
-- Update timeout time
+- Обновить таймаут
 
-- Update access control page
+- Обновить страницу управления доступом
 
-- Fix bug
+- Исправить ошибку
 
 ## v0.8.51
 
-- Optimize provider page
+- Улучшить страницу провайдеров
 
-- Optimize delay test
+- Улучшить тест задержки
 
-- Support local backup and recovery
+- Добавить локальное резервное копирование и восстановление
 
-- Fix android tile service issues
+- Исправить проблемы Android tile service
 
 ## v0.8.49
 
-- Fix linux core build error
+- Исправить ошибку сборки Linux core
 
-- Add proxy-only traffic statistics
+- Добавить статистику трафика только для прокси
 
-- Update core
+- Обновить core
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- Merge pull request #140 from txyyh/main
+- Влить pull request #140 из txyyh/main
 
-- 添加自建 F-Droid 仓库相关 workflow
-- Rename readme fingerprint
+- Добавить workflow для собственного репозитория F-Droid
+- Переименовать fingerprint в README
 
-- Rename workflow deploy repo name
+- Переименовать имя репозитория в workflow деплоя
 
-- Add download guide to README
+- Добавить инструкцию по загрузке в README
 
-- Add push release files to fdroid-repo
+- Добавить отправку релизных файлов в fdroid-repo
 
 ## v0.8.48
 
-- Optimize proxies page
+- Улучшить страницу прокси
 
-- Fix ua issues
+- Исправить проблемы UA
 
-- Optimize more details
+- Доработать дополнительные детали
 
 ## v0.8.47
 
-- Fix windows build error
+- Исправить ошибку сборки Windows
 
 ## v0.8.46
 
-- Update app icon
+- Обновить иконку приложения
 
-- Fix desktop backup error
+- Исправить ошибку резервного копирования на десктопе
 
-- Optimize request ua
+- Улучшить request UA
 
-- Change android icon
+- Изменить иконку Android
 
-- Optimize dashboard
+- Улучшить панель управления
 
 ## v0.8.44
 
-- Remove request validate certificate
+- Удалить проверку сертификата для запросов
 
-- Sync core
+- Синхронизировать core
 
 ## v0.8.43
 
-- Fix windows error
+- Исправить ошибку Windows
 
 ## v0.8.42
 
-- Fix setup.dart error
+- Исправить ошибку setup.dart
 
-- Fix android system proxy not effective
+- Исправить неработающий Android system proxy
 
-- Add macos arm64
+- Добавить macOS arm64
 
 ## v0.8.41
 
-- Optimize proxies page
+- Улучшить страницу прокси
 
-- Support mouse drag scroll
+- Добавить прокрутку перетаскиванием мышью
 
-- Adjust desktop ui
+- Подправить десктопный интерфейс
 
-- Revert "Fix android vpn issues"
+- Откатить "Исправить проблемы Android VPN"
 
-- This reverts commit 891977408e6938e2acd74e9b9adb959c48c79988.
+- Откат коммита 891977408e6938e2acd74e9b9adb959c48c79988.
 
 ## v0.8.40
 
-- Fix android vpn issues
+- Исправить проблемы Android VPN
 
-- Fix android vpn issues
+- Исправить проблемы Android VPN
 
-- Rollback partial modification
+- Откатить часть изменений
 
 ## v0.8.39
 
-- Fix the problem that ui can't be synchronized when android vpn is occupied by an external
+- Исправить ситуацию, когда интерфейс не синхронизируется, если Android VPN занят внешним приложением
 
-- Override default socksPort,port
+- Переопределить значения socksPort и port по умолчанию
 
 ## v0.8.38
 
-- Fix fab issues
+- Исправить проблемы FAB
 
 ## v0.8.37
 
-- Update version
+- Обновить версию
 
-- Fix the problem that vpn cannot be started in some cases
+- Исправить случаи, когда VPN не запускается
 
-- Fix the problem that geodata url does not take effect
+- Исправить ситуацию, когда geodata URL не применяется
 
 ## v0.8.36
 
-- Update ua
+- Обновить UA
 
-- Fix change outbound mode without check ip issues
+- Исправить смену outbound mode без проверки IP
 
-- Separate android ui and vpn
+- Разделить Android UI и VPN
 
-- Fix url validate issues 2
+- Исправить проблемы проверки URL 2
 
-- Add android hidden from the recent task
+- Скрывать Android-приложение из списка недавних задач
 
-- Add geoip file
+- Добавить файл geoip
 
-- Support modify geoData URL
+- Добавить изменение geoData URL
 
 ## v0.8.35
 
-- Fix url validate issues
+- Исправить проблемы проверки URL
 
-- Fix check ip performance problem
+- Исправить проблему производительности проверки IP
 
-- Optimize resources page
+- Улучшить страницу ресурсов
 
 ## v0.8.34
 
-- Add ua selector
+- Добавить выбор UA
 
-- Support modify test url
+- Добавить изменение test URL
 
-- Optimize android proxy
+- Улучшить Android proxy
 
-- Fix the error that async proxy provider could not selected the proxy
+- Исправить ошибку, из-за которой async proxy provider не мог выбрать прокси
 
 ## v0.8.33
 
-- Fix android proxy error
+- Исправить ошибку Android proxy
 
-- Fix submit error
+- Исправить ошибку отправки
 
-- Add windows tun
+- Добавить Windows TUN
 
-- Optimize android proxy
+- Улучшить Android proxy
 
-- Optimize change profile
+- Улучшить смену профиля
 
-- Update application ua
+- Обновить application UA
 
-- Optimize delay test
+- Улучшить тест задержки
 
 ## v0.8.32
 
-- Fix android repeated request notification issues
+- Исправить повторяющиеся уведомления запросов на Android
 
 ## v0.8.31
 
-- Fix memory overflow issues
+- Исправить проблемы переполнения памяти
 
 ## v0.8.30
 
-- Optimize proxies expansion panel 2
+- Улучшить панель раскрытия прокси 2
 
-- Fix android scan qrcode error
+- Исправить ошибку сканирования QR-кода на Android
 
 ## v0.8.29
 
-- Optimize proxies expansion panel
+- Улучшить панель раскрытия прокси
 
-- Fix text error
+- Исправить ошибку текста
 
 ## v0.8.28
 
-- Optimize proxy
+- Улучшить прокси
 
-- Optimize delayed sorting performance
+- Улучшить производительность сортировки по задержке
 
-- Add expansion panel proxies page
+- Добавить страницу прокси с панелью раскрытия
 
-- Support to adjust the proxy card size
+- Добавить настройку размера карточки прокси
 
-- Support to adjust proxies columns number
+- Добавить настройку числа колонок прокси
 
-- Fix autoRun show issues
+- Исправить отображение autoRun
 
-- Fix Android 10 issues
+- Исправить проблемы Android 10
 
-- Optimize ip show
+- Улучшить отображение IP
 
 ## v0.8.26
 
-- Add intranet IP display
+- Добавить отображение локального IP
 
-- Add connections page
+- Добавить страницу соединений
 
-- Add search in connections, requests
+- Добавить поиск в соединениях и запросах
 
-- Add keyword search in connections, requests, logs
+- Добавить поиск по ключевым словам в соединениях, запросах и логах
 
-- Add basic viewing editing capabilities
+- Добавить базовые возможности просмотра и редактирования
 
-- Optimize update profile
+- Улучшить обновление профиля
 
 ## v0.8.25
 
-- Update version
+- Обновить версию
 
-- Fix the problem of excessive memory usage in traffic usage.
+- Исправить чрезмерное потребление памяти в статистике трафика.
 
-- Add lightBlue theme color
+- Добавить цвет темы lightBlue
 
-- Fix start unable to update profile issues
+- Исправить проблему, когда после запуска не обновлялся профиль
 
-- Fix flashback caused by process
+- Исправить вылет, вызванный процессом
 
 ## v0.8.23
 
-- Add build version
+- Добавить версию сборки
 
-- Optimize quick start
+- Улучшить быстрый старт
 
-- Update system default option
+- Обновить системные параметры по умолчанию
 
 ## v0.8.22
 
-- Update build.yml
+- Обновить build.yml
 
-- Fix android vpn close issues
+- Исправить проблемы закрытия Android VPN
 
-- Add requests page
+- Добавить страницу запросов
 
-- Fix checkUpdate dark mode style error
+- Исправить стиль тёмной темы в checkUpdate
 
-- Fix quickStart error open app
+- Исправить ошибку quickStart при открытии приложения
 
-- Add memory proxies tab index
+- Добавить сохранение индекса вкладки прокси
 
-- Support hidden group
+- Добавить поддержку скрытых групп
 
-- Optimize logs
+- Улучшить логи
 
-- Fix externalController hot load error
+- Исправить ошибку горячей загрузки externalController
 
 ## v0.8.21
 
-- Add tcp concurrent switch
+- Добавить переключатель TCP concurrent
 
-- Add system proxy switch
+- Добавить переключатель system proxy
 
-- Add geodata loader switch
+- Добавить переключатель загрузчика geodata
 
-- Add external controller switch
+- Добавить переключатель external controller
 
-- Add auto gc on trim memory
+- Добавить автоматический GC при trim memory
 
-- Fix android notification error
+- Исправить ошибку Android notification
 
 ## v0.8.20
 
-- Fix ipv6 error
+- Исправить ошибку IPv6
 
-- Fix android udp direct error
+- Исправить ошибку Android UDP direct
 
-- Add ipv6 switch
+- Добавить переключатель IPv6
 
-- Add access all selected button
+- Добавить кнопку выбора доступа ко всем
 
-- Remove android low version splash
+- Удалить splash для старых версий Android
 
 ## v0.8.19
 
-- Update version
+- Обновить версию
 
-- Add allowBypass
+- Добавить allowBypass
 
-- Fix Android only pick .text file issues
+- Исправить выбор только файлов .text на Android
 
 ## v0.8.18
 
-- Fix search issues
+- Исправить проблемы поиска
 
 ## v0.8.17
 
-- Fix LoadBalance, Relay load error
+- Исправить ошибку загрузки LoadBalance и Relay
 
-- Fix build.yml4
+- Исправить build.yml4
 
-- Fix build.yml3
+- Исправить build.yml3
 
-- Fix build.yml2
+- Исправить build.yml2
 
-- Fix build.yml
+- Исправить build.yml
 
-- Add search function at access control
+- Добавить поиск в управлении доступом
 
-- Fix the issues with the profile add button to cover the edit button
+- Исправить перекрытие кнопки редактирования кнопкой добавления профиля
 
-- Adapt LoadBalance and Relay
+- Адаптировать LoadBalance и Relay
 
-- Add arm
+- Добавить arm
 
-- Fix android notification icon error
+- Исправить ошибку иконки Android notification
 
 ## v0.8.16
 
-- Add one-click update all profiles
-- Add expire show
+- Добавить обновление всех профилей в один клик
+- Добавить отображение срока действия
 
 ## v0.8.15
 
-- Temp remove tun mode
+- Временно удалить TUN-режим
 
-- Remove macos in workflow
+- Удалить macOS из workflow
 
-- Change go version
+- Изменить версию Go
 
 ## v0.8.14
 
-- Update Version
+- Обновить версию
 
-- Fix tun unable to open
+- Исправить невозможность открыть TUN
 
 ## v0.8.13
 
-- Optimize delay test2
+- Улучшить тест задержки 2
 
-- Optimize delay test
+- Улучшить тест задержки
 
-- Add check ip
+- Добавить проверку IP
 
-- add check ip request
+- Добавить запрос для проверки IP
 
 ## v0.8.12
 
-- Fix the problem that the download of remote resources failed after GeodataMode was turned on, which caused the
-  application to flash back.
+- Исправить сбой загрузки удалённых ресурсов после включения GeodataMode, из-за которого приложение вылетало.
 
-- Fix edit profile error
+- Исправить ошибку редактирования профиля
 
-- Fix quickStart change proxy error
+- Исправить ошибку quickStart при смене прокси
 
-- Fix core version
+- Исправить версию core
 
 ## v0.8.10
 
-- Fix core version
+- Исправить версию core
 
 ## v0.8.9
 
-- Update file_picker
+- Обновить file_picker
 
-- Add resources page
+- Добавить страницу ресурсов
 
-- Optimize more detail
+- Доработать дополнительные детали
 
-- Add access selected sorted
+- Добавить сортировку выбранных записей доступа
 
-- Fix notification duplicate creation issue
+- Исправить дублирование уведомлений
 
-- Fix AccessControl click issue
+- Исправить проблему клика в AccessControl
 
 ## v0.8.7
 
-- Fix Workflow
+- Исправить workflow
 
-- Fix Linux unable to open
+- Исправить проблему открытия в Linux
 
-- Update README.md 3
+- Обновить README.md 3
 
-- Create LICENSE
-- Update README.md 2
+- Создать LICENSE
+- Обновить README.md 2
 
-- Update README.md
+- Обновить README.md
 
-- Optimize workFlow
+- Улучшить workflow
 
 ## v0.8.6
 
-- optimize checkUpdate
+- Улучшить checkUpdate
 
 ## v0.8.5
 
-- Fix submit error
+- Исправить ошибку отправки
 
 ## v0.8.4
 
-- add WebDAV
+- Добавить WebDAV
 
-- add Auto check updates
+- Добавить автоматическую проверку обновлений
 
-- Optimize more details
+- Доработать дополнительные детали
 
-- optimize delayTest
+- Улучшить delayTest
 
 ## v0.8.2
 
-- upgrade flutter version
+- Обновить версию Flutter
 
 ## v0.8.1
 
-- Update kernel
-- Add import profile via QR code image
+- Обновить kernel
+- Добавить импорт профиля по изображению QR-кода
 
 ## v0.8.0
 
-- Add compatibility mode and adapt clash scheme.
+- Добавить режим совместимости и адаптировать схему Clash.
 
 ## v0.7.14
 
-- update Version
+- Обновить версию
 
-- Reconstruction application proxy logic
+- Перестроить логику proxy в приложении
 
 ## v0.7.13
 
-- Fix Tab destroy error
+- Исправить ошибку уничтожения вкладки
 
 ## v0.7.12
 
-- Optimize repeat healthcheck
+- Улучшить повторный healthcheck
 
 ## v0.7.11
 
-- Optimize Direct mode ui
+- Улучшить интерфейс режима Direct
 
 ## v0.7.10
 
-- Optimize Healthcheck
+- Улучшить Healthcheck
 
-- Remove proxies position animation, improve performance
-- Add Telegram Link
+- Удалить анимацию позиции прокси и повысить производительность
+- Добавить ссылку на Telegram
 
-- Update healthcheck policy
+- Обновить политику healthcheck
 
-- New Check URLTest
+- Добавить новый Check URLTest
 
-- Fix the problem of invalid auto-selection
+- Исправить некорректный авто-выбор
 
 ## v0.7.8
 
-- New Async UpdateConfig
+- Добавить новый Async UpdateConfig
 
-- add changeProfileDebounce
+- Добавить changeProfileDebounce
 
-- Update Workflow
+- Обновить workflow
 
-- Fix ChangeProfile block
+- Исправить блокировку ChangeProfile
 
-- Fix Release Message Error
+- Исправить ошибку сообщения релиза
 
 ## v0.7.7
 
-- Update Selector 2
+- Обновить Selector 2
 
 ## v0.7.6
 
-- Update Version
+- Обновить версию
 
-- Fix Proxies Select Error
+- Исправить ошибку выбора прокси
 
 ## v0.7.5
 
-- Fix the problem that the proxy group is empty in global mode.
+- Исправить ситуацию, когда группа прокси пуста в global mode.
 
-- Fix the problem that the proxy group is empty in global mode.
+- Исправить ситуацию, когда группа прокси пуста в global mode.
 
 ## v0.7.4
 
-- Add ProxyProvider2
+- Добавить ProxyProvider2
 
 ## v0.7.3
 
-- Add ProxyProvider
+- Добавить ProxyProvider
 
-- Update Version
+- Обновить версию
 
-- Update ProxyGroup Sort
+- Обновить сортировку ProxyGroup
 
-- Fix Android quickStart VpnService some problems
+- Исправить ряд проблем Android quickStart VpnService
 
 ## v0.7.1
 
-- Update version
+- Обновить версию
 
-- Set Android notification low importance
+- Установить низкую важность Android notification
 
-- Fix the issue that VpnService can't be closed correctly in special cases
+- Исправить случаи, когда VpnService не закрывается корректно
 
-- Fix the problem that TileService is not destroyed correctly in some cases
+- Исправить случаи, когда TileService не уничтожается корректно
 
-- Adjust tab animation defaults
+- Подправить значения анимации вкладок по умолчанию
 
-- Add Telegram in README_zh_CN.md
+- Добавить Telegram в README_zh_CN.md
 
-- Add Telegram
+- Добавить Telegram
 
 ## v0.7.0
 
-- update mobile_scanner
+- Обновить mobile_scanner
 
-- Initial commit
+- Начальный коммит

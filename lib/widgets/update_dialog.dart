@@ -9,6 +9,80 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/dialog.dart';
 import 'package:flutter/material.dart';
 
+enum UpdateReleaseAction { later, skipRelease, install }
+
+class UpdateAvailableDialog extends StatelessWidget {
+  const UpdateAvailableDialog({
+    super.key,
+    required this.release,
+  });
+
+  final AppRelease release;
+
+  List<String> get _notes {
+    final notes = utils.parseReleaseBody(release.body);
+    if (notes.isNotEmpty) {
+      return notes;
+    }
+    final body = release.body.trim();
+    if (body.isEmpty) {
+      return const [];
+    }
+    return body
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = _notes;
+    final textTheme = Theme.of(context).textTheme;
+    return CommonDialog(
+      title: appLocalizations.discoverNewVersion,
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(UpdateReleaseAction.later);
+          },
+          child: Text(appLocalizations.later),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(UpdateReleaseAction.skipRelease);
+          },
+          child: Text(appLocalizations.skipRelease),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(UpdateReleaseAction.install);
+          },
+          child: Text(
+            system.isAndroid
+                ? appLocalizations.downloadAndInstall
+                : appLocalizations.goDownload,
+          ),
+        ),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(release.tagName, style: textTheme.headlineSmall),
+          if (notes.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            for (final note in notes) ...[
+              Text('- $note', style: textTheme.bodyMedium),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 enum _AndroidUpdateStage { preparing, downloading, verifying, installing, error }
 
 class AndroidUpdateDialog extends StatefulWidget {

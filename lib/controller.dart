@@ -150,25 +150,19 @@ extension InitControllerExt on AppController {
     bool isUser = false,
   }) async {
     if (data != null) {
-      final submits = utils.parseReleaseBody(data.body);
-      final textTheme = _context.textTheme;
-      final res = await globalState.showMessage(
-        title: appLocalizations.discoverNewVersion,
-        message: TextSpan(
-          text: '${data.tagName} \n',
-          style: textTheme.headlineSmall,
-          children: [
-            TextSpan(text: '\n', style: textTheme.bodyMedium),
-            for (final submit in submits)
-              TextSpan(text: '- $submit \n', style: textTheme.bodyMedium),
-          ],
-        ),
-        confirmText: system.isAndroid
-            ? appLocalizations.downloadAndInstall
-            : appLocalizations.goDownload,
-        cancelText: isUser ? null : appLocalizations.noLongerRemind,
+      final skippedReleaseTag = await preferences.getSkippedReleaseTag();
+      if (!isUser && skippedReleaseTag == data.tagName) {
+        return;
+      }
+      final action = await globalState.showCommonDialog<UpdateReleaseAction>(
+        child: UpdateAvailableDialog(release: data),
       );
-      if (res == true) {
+      if (action == UpdateReleaseAction.skipRelease) {
+        await preferences.setSkippedReleaseTag(data.tagName);
+        return;
+      }
+      if (action == UpdateReleaseAction.install) {
+        await preferences.clearSkippedReleaseTag();
         if (system.isAndroid) {
           await globalState.showCommonDialog(
             dismissible: false,
@@ -177,10 +171,6 @@ extension InitControllerExt on AppController {
         } else {
           launchUrl(Uri.parse(data.htmlUrl));
         }
-      } else if (!isUser && res == false) {
-        _ref
-            .read(appSettingProvider.notifier)
-            .update((state) => state.copyWith(autoCheckUpdate: false));
       }
     } else if (isUser) {
       globalState.showMessage(

@@ -8,74 +8,74 @@
 
 [![Downloads](https://img.shields.io/github/downloads/makriq3/FlClash/total?style=flat-square&logo=github)](https://github.com/makriq3/FlClash/releases/)[![Last Version](https://img.shields.io/github/release/makriq3/FlClash/all.svg?style=flat-square)](https://github.com/makriq3/FlClash/releases/)[![License](https://img.shields.io/github/license/makriq3/FlClash?style=flat-square)](LICENSE)
 
-Independent FlClash release maintained by `makriq3`, focused on Android VPN safety, simpler updates, and a release pipeline fully owned by this repository.
+Независимая линия FlClash, которую поддерживает `makriq3`. Основной фокус: защита Android VPN, более простой механизм обновлений и полностью самостоятельный контур выпуска внутри этого репозитория.
 
-## Product Focus
+## Фокус продукта
 
-- Android VPN mode is hardened against localhost proxy leaks.
-- Android VPN hardening is enforced at runtime, including live config refreshes after startup.
-- Android release verification is designed around GitHub Actions, not repeated manual APK installs.
-- Research and mitigation notes live in the repository itself.
+- Android VPN-режим дополнительно защищён от localhost-утечек через локальные прокси.
+- Усиление защиты Android применяется не только при старте, но и во время обновления конфигурации на лету.
+- Проверка Android-релизов строится вокруг GitHub Actions, а не вокруг бесконечных ручных переустановок APK.
+- Исследования, ограничения и принятые меры хранятся прямо в репозитории.
 
-## Current Priorities
+## Текущие приоритеты
 
-1. Reduce app-visible Android leak surface without requiring root.
-2. Keep the repository self-contained and releasable from this fork.
-3. Build a stable base for future privacy and usability features.
+1. Сократить видимую для приложений Android-поверхность утечек без требования root.
+2. Держать репозиторий самодостаточным и полностью релизопригодным из этого форка.
+3. Построить стабильную основу для следующих улучшений приватности и пользовательского опыта.
 
-## Research And Security Docs
+## Документация и безопасность
 
-- [Android VPN Hardening Research](docs/android-vpn-hardening.md)
-- [Security Policy](SECURITY.md)
-- [Roadmap](ROADMAP.md)
-- [ChangeLog](CHANGELOG.md)
+- [Исследование защиты Android VPN](docs/android-vpn-hardening.md)
+- [Политика безопасности](SECURITY.md)
+- [План развития](ROADMAP.md)
+- [Журнал изменений](CHANGELOG.md)
 
-## Screenshots
+## Скриншоты
 
-Desktop:
+Десктоп:
 <p style="text-align: center;">
     <img alt="desktop" src="snapshots/desktop.gif">
 </p>
 
-Mobile:
+Мобильная версия:
 <p style="text-align: center;">
     <img alt="mobile" src="snapshots/mobile.gif">
 </p>
 
-## Highlights
+## Ключевые особенности
 
-- Multi-platform: Android, Windows, macOS, Linux
-- Flutter UI with Clash-compatible workflow
-- WebDAV sync support
-- Subscription support
-- Android VPN hardening for privacy-sensitive deployments
+- Поддержка нескольких платформ: Android, Windows, macOS, Linux
+- Flutter-интерфейс с Clash-совместимым рабочим сценарием
+- Синхронизация через WebDAV
+- Поддержка подписок
+- Дополнительное усиление защиты Android VPN для чувствительных к приватности сценариев
 
-## Android Hardening Snapshot
+## Что уже сделано для защиты Android
 
-In Android VPN mode this fork now closes client-side leak paths such as:
+В Android VPN-режиме этот форк теперь закрывает такие клиентские пути утечки, как:
 
-- localhost mixed / socks / http listeners,
-- localhost-accessible external controller,
-- Android system proxy exposure,
-- stable tunnel fingerprint values.
+- локальные `mixed` / `socks` / `http` listeners,
+- доступный с localhost `external-controller`,
+- публикация Android system proxy,
+- стабильные, легко узнаваемые параметры туннеля.
 
-The current hardening model also restores correct domain-based routing on the hardened TUN path, so Android direct-route rules keep working without reopening the original localhost leak surface.
+Текущая модель усиления защиты также восстанавливает корректную доменную маршрутизацию на усиленном TUN-пути, поэтому правила прямой маршрутизации Android продолжают работать без повторного открытия исходной localhost-утечки.
 
-Important: this fork reduces what the client leaks by itself. It does not claim to fully hide VPN presence from Android public APIs without root/Xposed.
+Важно: этот форк уменьшает то, что клиент раскрывает сам по себе. Он не заявляет о полном сокрытии VPN от публичных Android API без root/Xposed.
 
-## Build
+## Сборка
 
-1. Update submodules
+1. Обновите submodules
 
    ```bash
    git submodule update --init --recursive
    ```
 
-2. Install Flutter and Go
+2. Установите `Flutter` и `Go`
 
-3. Install Android SDK and Android NDK for Android builds
+3. Для Android-сборок установите `Android SDK` и `Android NDK`
 
-4. Build:
+4. Соберите нужную платформу:
 
    ```bash
    dart setup.dart android
@@ -84,17 +84,17 @@ Important: this fork reduces what the client leaks by itself. It does not claim 
    dart setup.dart macos --arch arm64
    ```
 
-## Releases
+## Релизы
 
-- Branch Android artifacts: GitHub Actions `android-branch-build`
-- Stable multi-platform release: tag push `v*`
+- Веточные Android-артефакты: GitHub Actions `android-веточная-сборка`
+- Стабильный мультиплатформенный релиз: push тега `v*`
 
-## Product Direction
+## Направление развития
 
-This repository is being developed as a standalone release line with its own:
+Этот репозиторий развивается как самостоятельная релизная линия со своими:
 
-- Android privacy hardening policy,
-- application identifiers and packaging metadata,
-- release pipeline,
-- security documentation,
-- and feature roadmap.
+- правилами усиления приватности Android,
+- идентификаторами приложения и packaging metadata,
+- конвейером релизов,
+- документацией по безопасности,
+- и собственной дорожной картой.

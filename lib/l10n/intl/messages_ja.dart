@@ -297,6 +297,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloadAndInstall": MessageLookupByLibrary.simpleMessage(
       "ダウンロードしてインストール",
     ),
+    "later": MessageLookupByLibrary.simpleMessage("後で"),
     "goDownload": MessageLookupByLibrary.simpleMessage("ダウンロードへ"),
     "goToConfigureScript": MessageLookupByLibrary.simpleMessage("スクリプト設定に移動"),
     "hasCacheChange": MessageLookupByLibrary.simpleMessage("変更をキャッシュしますか？"),
@@ -365,6 +366,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "minutesAgo": m7,
     "mixedPort": MessageLookupByLibrary.simpleMessage("混合ポート"),
     "mode": MessageLookupByLibrary.simpleMessage("モード"),
+    "skipRelease": MessageLookupByLibrary.simpleMessage(
+      "このリリースをスキップ",
+    ),
     "monochromeScheme": MessageLookupByLibrary.simpleMessage("モノクローム"),
     "months": MessageLookupByLibrary.simpleMessage("月"),
     "monthsAgo": m8,

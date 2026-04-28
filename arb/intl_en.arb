@@ -144,6 +144,8 @@
   "checkUpdate": "Check for updates",
   "discoverNewVersion": "Discover the new version",
   "checkUpdateError": "The current application is already the latest version",
+  "later": "Later",
+  "skipRelease": "Skip release",
   "goDownload": "Go to download",
   "downloadAndInstall": "Download and install",
   "updatePreparing": "Preparing update",

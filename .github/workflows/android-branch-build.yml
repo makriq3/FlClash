@@ -1,4 +1,4 @@
-name: android-branch-build
+name: android-веточная-сборка
 
 on:
   workflow_dispatch:
@@ -13,12 +13,12 @@ jobs:
   android:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Получить код
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Android Signing
+      - name: Настроить подпись Android
         if: env.KEYSTORE_B64 != ''
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE }}
@@ -31,41 +31,41 @@ jobs:
           echo "storePassword=${STORE_PASSWORD_VALUE}" >> android/local.properties
           echo "keyPassword=${KEY_PASSWORD_VALUE}" >> android/local.properties
 
-      - name: Setup Go
+      - name: Настроить Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.0'
           cache-dependency-path: |
             core/go.sum
 
-      - name: Setup Flutter
+      - name: Настроить Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: 3.35.7
           cache: true
 
-      - name: Detect Android NDK
+      - name: Определить Android NDK
         run: |
           latest_ndk="$(find "${ANDROID_HOME}/ndk" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
           if [ -z "${latest_ndk}" ]; then
-            echo "ANDROID_NDK not found under ${ANDROID_HOME}/ndk" >&2
+            echo "ANDROID_NDK не найден в ${ANDROID_HOME}/ndk" >&2
             exit 1
           fi
           echo "ANDROID_NDK=${latest_ndk}" >> "${GITHUB_ENV}"
 
-      - name: Get Flutter Dependency
+      - name: Получить зависимости Flutter
         run: |
           flutter --version
           flutter pub get
 
-      - name: Run Android Regression Tests
+      - name: Запустить Android-регрессионные тесты
         run: flutter test test/common
 
-      - name: Build Android Artifacts
+      - name: Собрать Android-артефакты
         run: dart setup.dart android
 
-      - name: Upload Android Artifact
+      - name: Загрузить Android-артефакты
         uses: actions/upload-artifact@v4
         with:
           name: android-dist

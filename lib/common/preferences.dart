@@ -39,6 +39,21 @@ class Preferences {
     await preferences?.setString('sharedState', json.encode(shareState));
   }
 
+  Future<String?> getSkippedReleaseTag() async {
+    final preferences = await sharedPreferencesCompleter.future;
+    return preferences?.getString('skippedReleaseTag');
+  }
+
+  Future<void> setSkippedReleaseTag(String tag) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    await preferences?.setString('skippedReleaseTag', tag);
+  }
+
+  Future<void> clearSkippedReleaseTag() async {
+    final preferences = await sharedPreferencesCompleter.future;
+    await preferences?.remove('skippedReleaseTag');
+  }
+
   Future<Map<String, Object?>?> getConfigMap() async {
     try {
       final preferences = await sharedPreferencesCompleter.future;

@@ -407,6 +407,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "downloadAndInstall": MessageLookupByLibrary.simpleMessage(
       "Скачать и установить",
     ),
+    "later": MessageLookupByLibrary.simpleMessage("Позже"),
     "goDownload": MessageLookupByLibrary.simpleMessage("Перейти к загрузке"),
     "goToConfigureScript": MessageLookupByLibrary.simpleMessage(
       "Перейти к настройке скрипта",
@@ -509,6 +510,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "minutesAgo": m7,
     "mixedPort": MessageLookupByLibrary.simpleMessage("Смешанный порт"),
     "mode": MessageLookupByLibrary.simpleMessage("Режим"),
+    "skipRelease": MessageLookupByLibrary.simpleMessage(
+      "Пропустить релиз",
+    ),
     "monochromeScheme": MessageLookupByLibrary.simpleMessage("Монохром"),
     "months": MessageLookupByLibrary.simpleMessage("Месяцев"),
     "monthsAgo": m8,

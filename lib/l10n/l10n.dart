@@ -1119,6 +1119,21 @@ class AppLocalizations {
     );
   }
 
+  /// `Later`
+  String get later {
+    return Intl.message('Later', name: 'later', desc: '', args: []);
+  }
+
+  /// `Skip release`
+  String get skipRelease {
+    return Intl.message(
+      'Skip release',
+      name: 'skipRelease',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Go to download`
   String get goDownload {
     return Intl.message(

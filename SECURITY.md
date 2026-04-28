@@ -1,30 +1,30 @@
-# Security Policy
+# Политика безопасности
 
-## Scope
+## Область фокуса
 
-This fork prioritizes Android VPN privacy hardening, especially around:
+Этот форк в первую очередь концентрируется на усилении приватности Android VPN, особенно вокруг:
 
-- localhost proxy exposure,
-- app-visible VPN indicators that can be reduced client-side,
-- safer defaults for Android `VpnService` mode.
+- доступности локальных прокси на localhost,
+- заметных приложениям VPN-индикаторов, которые можно уменьшить на стороне клиента,
+- более безопасных дефолтов для Android `VpnService`.
 
-## What To Report
+## О чём стоит сообщать
 
-Please open a security issue if you find:
+Открывайте обращение по безопасности, если найдёте:
 
-- a localhost listener exposed in Android VPN mode,
-- an unauthenticated API or proxy reachable by another app on the same device,
-- a configuration path that silently re-enables risky Android defaults,
-- a release workflow regression that publishes artifacts from the wrong repository context.
+- listener на localhost, который остаётся доступным в Android VPN-режиме,
+- неаутентифицированный API или прокси, достижимый другим приложением на том же устройстве,
+- конфигурационный путь, который молча возвращает рискованные Android-дефолты,
+- регрессию в релизном процессе, из-за которой публикуются артефакты не из того контекста репозитория.
 
-## What Is Out Of Scope For Client-Only Fixes
+## Что не решается только клиентом
 
-This fork cannot fully hide Android VPN presence from public Android APIs without device-side root hooking.
+Этот форк не может полностью скрыть наличие Android VPN от публичных Android API без device-side root hooking.
 
-Examples:
+Примеры:
 
 - `NetworkCapabilities.TRANSPORT_VPN`
 - `NET_CAPABILITY_NOT_VPN`
-- some route / interface / DNS signals visible to apps
+- часть route / interface / DNS сигналов, видимых приложениям
 
-For background and current mitigation strategy, see [docs/android-vpn-hardening.md](docs/android-vpn-hardening.md).
+Фон и текущая стратегия смягчения описаны в [docs/android-vpn-hardening.md](docs/android-vpn-hardening.md).

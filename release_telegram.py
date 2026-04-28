@@ -60,7 +60,7 @@ if media:
     media[-1]["parse_mode"] = "Markdown"
 
 if not TELEGRAM_BOT_TOKEN or not CHAT_ID:
-    print("Skip Telegram release broadcast: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not set.")
+    print("Пропуск Telegram-уведомления о релизе: не заданы TELEGRAM_BOT_TOKEN или TELEGRAM_CHAT_ID.")
     raise SystemExit(0)
 
 response = requests.post(
@@ -72,4 +72,4 @@ response = requests.post(
     files=files
 )
 
-print("Response JSON:", response.json())
+print("Ответ Telegram API:", response.json())

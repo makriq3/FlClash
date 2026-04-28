@@ -1,117 +1,117 @@
-# Android VPN Hardening Research
+# Исследование защиты Android VPN
 
-## Why This Document Exists
+## Зачем нужен этот документ
 
-This fork exists because Android VPN clients can leak practical indicators to other apps even when traffic is routed through `VpnService`.
+Этот форк существует потому, что Android VPN-клиенты могут выдавать другим приложениям практические признаки своего присутствия даже тогда, когда трафик уже маршрутизируется через `VpnService`.
 
-The most dangerous client-side issue is not simply that Android knows a VPN exists. The more serious problem is when the client exposes extra localhost listeners or system proxy settings that let another app:
+Самая опасная клиентская проблема не в том, что Android сам знает о наличии VPN. Гораздо серьёзнее ситуация, когда клиент открывает лишние localhost listeners или публикует системные proxy-настройки, позволяя другому приложению:
 
-- detect the client family,
-- connect to a local proxy,
-- and recover the VPN exit IP or other metadata.
+- определить семейство клиента,
+- подключиться к локальному прокси,
+- восстановить VPN exit IP и другую связанную метаинформацию.
 
-## Threat Model
+## Модель угроз
 
-We focus on what a regular Android app can see without root:
+Мы фокусируемся на том, что обычное Android-приложение может увидеть без root:
 
 - `NetworkCapabilities.TRANSPORT_VPN`
 - `NET_CAPABILITY_NOT_VPN`
-- loopback ports on `127.0.0.1` / `::1`
+- loopback-порты на `127.0.0.1` / `::1`
 - `System.getProperty("http.proxyHost")`
 - `System.getProperty("socksProxyHost")`
 - `LinkProperties.dnsServers`
-- `NetworkInterface` enumeration
+- перечисление `NetworkInterface`
 - `/proc/net/tcp*`, `/proc/net/udp*`, `/proc/net/route`
 
-We do not treat privileged root/Xposed API hiding as a client-only solution. That is a separate device-side layer.
+Привилегированное сокрытие API через root/Xposed мы не рассматриваем как клиентское решение. Это отдельный device-side слой.
 
-## Findings Relevant To FlClash
+## Находки, важные для FlClash
 
-Before hardening, FlClash on Android had several practical indicators:
+До усиления защиты FlClash на Android имел несколько практических индикаторов:
 
-- a local mixed proxy could remain available on localhost,
-- Android `systemProxy` support could publish `127.0.0.1:<port>` to the system,
-- `allowBypass` could permit bypass behavior that weakens privacy guarantees,
-- `VpnService` used stable, fingerprintable tunnel addresses and a stable session name.
+- локальный mixed proxy мог оставаться доступным на localhost,
+- поддержка Android `systemProxy` могла публиковать `127.0.0.1:<port>` в систему,
+- `allowBypass` мог ослаблять гарантии приватности,
+- `VpnService` использовал стабильные, легко узнаваемые адреса туннеля и стабильное имя сессии.
 
-These indicators make app-side detection easier and can turn a VPN client into an IP leak source for the entire server.
+Все эти признаки упрощают app-side detection и могут превращать VPN-клиент в источник IP-утечки для всего сервера.
 
-## What This Fork Changes
+## Что меняет этот форк
 
-In Android VPN mode this fork now:
+В Android VPN-режиме этот форк теперь:
 
-- forces all localhost inbound listeners closed in generated Clash config:
+- принудительно закрывает все localhost inbound listeners в сгенерированной Clash-конфигурации:
   - `port=0`
   - `socks-port=0`
   - `mixed-port=0`
   - `redir-port=0`
   - `tproxy-port=0`
-- forces `external-controller=''`
-- forces `allow-lan=false`
-- forces `systemProxy=false`
-- forces `allowBypass=false`
-- stops routing app-owned HTTP requests through the localhost mixed proxy while Android VPN mode is active
-- randomizes per-start IPv4 / IPv6 tunnel addresses
-- uses a neutral `VpnService` session name (`VPN`)
+- принудительно выставляет `external-controller=''`
+- принудительно удерживает `allow-lan=false`
+- принудительно выставляет `systemProxy=false`
+- принудительно выставляет `allowBypass=false`
+- перестаёт направлять app-owned HTTP-запросы через localhost mixed proxy, пока активен Android VPN-режим
+- рандомизирует IPv4 / IPv6 адреса туннеля при каждом запуске
+- использует нейтральное имя сессии `VpnService` (`VPN`)
 
-## Routing Follow-Up After Initial Hardening
+## Что пришлось доработать после первого прохода усиления защиты
 
-The first hardening pass closed the localhost proxy path correctly, but it also changed how some Android traffic reached Clash.
+Первая версия усиления защиты корректно закрыла путь через локальный прокси на localhost, но при этом изменила то, как часть Android-трафика доходила до Clash.
 
-Before hardening, some browser and app traffic could arrive with domain metadata preserved through the local proxy path. After hardening, that same traffic was forced onto the pure TUN path, where routing can initially be IP-only.
+До усиления защиты часть браузерного и приложенческого трафика могла приходить с сохранённой доменной метаинформацией через локальный прокси. После усиления защиты этот же трафик пошёл по чистому TUN-пути, где маршрут поначалу может быть только IP-ориентированным.
 
-That matters because many user configurations depend on domain-aware rules such as:
+Это критично, потому что многие пользовательские конфигурации зависят от доменных правил:
 
 - `DOMAIN`
 - `DOMAIN-SUFFIX`
 - `GEOSITE`
-- domain-oriented rule providers and direct-route lists
+- domain-oriented rule providers и direct-route списки
 
-If Android TUN traffic arrives without a recoverable host name, those rules may stop matching even though the user config itself did not change.
+Если Android TUN-трафик приходит без восстанавливаемого имени хоста, такие правила могут перестать матчиться, хотя сама пользовательская конфигурация формально не менялась.
 
-The follow-up mitigation in this fork keeps localhost listeners closed while restoring correct routing behavior by:
+Дополнительная доработка в этом форке удерживает localhost listeners закрытыми и одновременно восстанавливает корректную маршрутизацию за счёт:
 
-- enabling safe domain recovery on hardened Android VPN flows via `sniffer` augmentation for `http`, `tls`, and `quic`,
-- translating compatible Android `bypassDomain` entries into top-priority Clash `DIRECT` rules,
-- keeping Android runtime hardening consistent during both initial setup and later live `updateConfig(...)` refreshes.
+- безопасного восстановления доменной информации на усиленном Android VPN-потоке через `sniffer` для `http`, `tls` и `quic`,
+- преобразования совместимых Android `bypassDomain` значений в приоритетные Clash `DIRECT` rules,
+- одинакового применения Android runtime-защиты как при первичной настройке, так и при последующих обновлениях `updateConfig(...)` на лету.
 
-In other words:
+Иными словами:
 
-- the localhost leak path stays closed,
-- the Android TUN path remains hardened,
-- and domain-based routing behavior is restored without reintroducing the original exposure.
+- localhost-утечка остаётся закрытой,
+- Android TUN-путь остаётся усиленным,
+- а доменная маршрутизация восстанавливается без повторного открытия исходной поверхности атаки.
 
-## What This Fork Does Not Claim To Solve
+## Что этот форк не обещает решить
 
-This fork does **not** claim to eliminate all Android VPN detection.
+Этот форк **не** заявляет, что полностью устраняет весь Android VPN detection.
 
-Without root/Xposed/LSPosed-style API masking, a normal Android app can still observe:
+Без root/Xposed/LSPosed-подобного API masking обычное Android-приложение всё ещё может увидеть:
 
 - `TRANSPORT_VPN`
-- the missing `NET_CAPABILITY_NOT_VPN`
-- some TUN / route / DNS / MTU level signals
+- отсутствие `NET_CAPABILITY_NOT_VPN`
+- часть TUN / route / DNS / MTU сигналов
 
-This means:
+Это означает:
 
-- client hardening can remove practical localhost leaks and reduce fingerprinting,
-- but full "no VPN signs at all" is not realistic from the client alone.
+- клиентское усиление защиты может убрать практические localhost-утечки и сократить возможность распознавания,
+- но полностью убрать все VPN-признаки силами одного клиента нереалистично.
 
-## Release And Verification Policy
+## Политика релизов и верификации
 
-For Android privacy fixes, we want one release to validate several things at once.
+Для Android-исправлений в области приватности мы хотим, чтобы один релиз сразу проверял несколько критичных свойств.
 
-Every release should check:
+Каждый релиз должен проверять:
 
-1. localhost listener surface is closed in Android VPN mode,
-2. no unexpected `external-controller` exposure exists,
-3. app-owned requests do not depend on localhost mixed proxy while VPN mode is active,
-4. detector apps such as `YourVPNDead` do not recover exit IP through localhost,
-5. direct-route behavior for domain-based Android rules still works on the hardened TUN path,
-6. runtime `updateConfig(...)` does not silently reopen localhost listeners after startup.
+1. что localhost listener surface закрыт в Android VPN-режиме;
+2. что не появляется неожиданный `external-controller`;
+3. что app-owned запросы не зависят от localhost mixed proxy при активном VPN;
+4. что detector apps вроде `YourVPNDead` не могут получить exit IP через localhost;
+5. что direct-route логика для доменных Android-правил продолжает работать на hardened TUN path;
+6. что runtime `updateConfig(...)` после запуска не переоткрывает localhost listeners.
 
-## Notes On Public Claims
+## Осторожность в публичных формулировках
 
-We treat some public claims around Android VPN detection as partially verified and partially speculative.
+Часть публичных заявлений о детекте Android VPN стоит воспринимать как частично подтверждённые, а частично спекулятивные.
 
-- App-side localhost and Android API based detection is real and reproducible.
-- Exact public claims about enforcement timelines or unpublished official methodologies should be treated carefully unless independently confirmed.
+- App-side detection через localhost и Android API реальна и воспроизводима.
+- Любые точные публичные заявления о сроках enforcement или о непубличных официальных методиках нужно трактовать осторожно, если они не подтверждены независимо.

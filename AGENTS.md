@@ -118,6 +118,17 @@
 
 - Android reporting VPN transport via `NetworkCapabilities`.
 - Absence of `NET_CAPABILITY_NOT_VPN` on the active VPN network.
+
+### Update Dialog Simplification (2026-04-13)
+
+- Текущий обработчик обновлений жил в `lib/controller.dart` на основе `globalState.showMessage(...)` с двумя действиями.
+- Отказ от релиза при автообновлении раньше отключал `autoCheckUpdate` глобально, что создавало неочевидное поведение.
+- Новая продуктовая логика обновления для Android:
+  - `Позже` закрывает окно без побочных эффектов.
+  - `Пропустить релиз` сохраняет пропуск только для текущего `tagName` релиза в `SharedPreferences`.
+  - `Скачать и установить` очищает пропуск и запускает существующий Android self-update pipeline.
+- Для хранения пропущенного релиза используется отдельный ключ `skippedReleaseTag` в `lib/common/preferences.dart`.
+- Ручная проверка обновлений должна игнорировать сохранённый пропуск и всё равно показывать релиз пользователю.
 - Visibility of TUN-style interfaces and some route / MTU / DNS signs to apps using public Android APIs.
 - These require device-side root hooking / API hiding tools such as Xposed/LSPosed modules.
 
@@ -617,3 +628,86 @@
     - artifact upload
 - Release intent updated:
   - supersede failed `v0.8.95` with `v0.8.96` after production cleanup and runtime namespace correction
+
+### Branch Cleanup And Release Channel Simplification (2026-04-13)
+
+- Repository state after `v0.8.96` verification:
+  - `main` is the default branch on `makriq3/FlClash`
+  - `latestRelease` on GitHub is `v0.8.96`
+  - fork still had extra remote branches:
+    - `codex/android-self-update`
+    - `codex/prod-rebrand-release`
+    - `dev`
+    - `release/v0.8.91`
+    - `release/v0.8.92`
+- Branch ancestry check:
+  - both `codex/*` branches had no commits missing from `main`
+  - `dev` and `release/*` were confirmed as upstream-derived history and are not part of the maintained fork release line
+- Cleanup direction:
+  - keep `origin/main` as the single maintained branch for the fork
+  - delete stale fork branches on `origin`
+  - remove local `upstream` remote after upstream traces are no longer needed operationally
+- Cleanup completed:
+  - deleted remote branches:
+    - `codex/android-self-update`
+    - `codex/prod-rebrand-release`
+    - `dev`
+    - `release/v0.8.91`
+    - `release/v0.8.92`
+  - deleted matching local `codex/*` branches
+  - removed local Git remote `upstream`
+  - resulting branch layout is now:
+    - `origin/main`
+- Release follow-up:
+  - bump app version to `0.8.97+2026041301`
+  - cut the next release from cleaned `main` after branch cleanup
+
+### Repository Russification And Release Reset (2026-04-13)
+
+- Release control update:
+  - user explicitly stopped the first `v0.8.97` release attempt because the delta was too small for a production tag
+  - canceled GitHub Actions run:
+    - `24329018459`
+  - deleted tag:
+    - `v0.8.97`
+  - confirmed no GitHub Release object remained for `v0.8.97` after the cancel / tag removal sequence
+- Russification scope chosen for this pass:
+  - translate the first-party public repository surface to Russian before recutting the release
+  - include:
+    - `README.md`
+    - `ROADMAP.md`
+    - `SECURITY.md`
+    - `CHANGELOG.md`
+    - `docs/android-vpn-hardening.md`
+    - GitHub issue templates
+    - GitHub release template
+    - GitHub Actions workflow display names and step labels
+    - repository description on GitHub
+    - package description in `pubspec.yaml`
+  - keep vendor / third-party content out of scope:
+    - `core/Clash.Meta`
+  - keep `README_zh_CN.md`, but convert it into a Russian compatibility pointer to the main Russian docs so old links do not break
+- GitHub metadata update:
+  - repository description is now:
+    - `Независимый форк FlClash с упором на защиту Android VPN и автономные релизы.`
+- Release strategy after russification:
+  - push the documentation / metadata pass to `main`
+  - use the branch Android Actions workflow on `main` as the pre-release verification gate
+  - only after a green branch build, recreate tag `v0.8.97` from the verified `main`
+
+### Release Notes Formatting Follow-Up (2026-04-13)
+
+- User feedback on `v0.8.97`:
+  - the release page looked like a short README / policy text instead of concise release notes
+  - the `v0.8.97` changelog wording also read like instructions rather than completed changes
+- Root cause:
+  - release workflow prepended `.github/release_template.md` before the actual changelog excerpt
+  - the template itself was written as a generic repository description
+- Fix direction:
+  - make the template a short footer with only practical release links
+  - generate release body in this order:
+    - title
+    - changelog excerpt for the tag
+    - short footer
+  - rewrite `v0.8.97` changelog entry in release-note style
+  - update the already published `v0.8.97` body in place so users do not keep seeing the bad format

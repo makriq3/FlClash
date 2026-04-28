@@ -1,7 +1,7 @@
 name: fl_clash
-description: Independent FlClash release maintained by makriq3 with Android-focused privacy and update improvements.
+description: Независимый релиз FlClash от makriq3 с упором на защиту Android и улучшенное обновление приложения.
 publish_to: 'none'
-version: 0.8.96+2026041204
+version: 0.8.98+2026041302
 environment:
   sdk: '>=3.8.0 <4.0.0'
 

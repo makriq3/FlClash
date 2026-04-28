@@ -1,32 +1,32 @@
-# Roadmap
+# План развития
 
-## Direction
+## Направление
 
-This fork is focused on turning FlClash into a more privacy-conscious and operationally independent Android-first VPN client.
+Этот форк развивает FlClash как Android-ориентированный VPN-клиент с более серьёзным отношением к приватности и полной операционной независимостью от апстрима.
 
-The near-term goal is not to promise impossible "zero detection" claims. The goal is to remove avoidable client-side leaks, ship safer defaults, and make releases reproducible from this repository alone.
+Ближайшая цель не в том, чтобы обещать нереалистичное «полное отсутствие детекта». Цель в том, чтобы убрать устранимые клиентские утечки, сделать безопасные настройки дефолтом и выпускать воспроизводимые релизы прямо из этого репозитория.
 
-## Current Track
+## Текущий трек
 
-### 1. Android Privacy Hardening
+### 1. Усиление приватности Android
 
-- Keep localhost listener exposure closed in Android VPN mode.
-- Reduce fingerprintable static values where it can be done safely.
-- Add regression coverage for privacy-sensitive config generation paths.
+- Держать localhost listener exposure закрытым в Android VPN-режиме.
+- Сокращать легко узнаваемые статические значения там, где это можно сделать безопасно.
+- Расширять регрессионное покрытие для чувствительных путей генерации конфигурации.
 
-### 2. Release Independence
+### 2. Независимые релизы
 
-- Build Android and stable releases from this fork's GitHub Actions.
-- Keep release metadata, templates, and documentation maintained locally.
-- Reduce assumptions about upstream-only infrastructure.
+- Собирать Android и стабильные релизы из GitHub Actions этого форка.
+- Держать метаданные релизов, шаблоны и документацию внутри репозитория.
+- Убирать предположения о существовании инфраструктуры, доступной только в апстриме.
 
-### 3. Product Foundation
+### 3. Основа продукта
 
-- Keep the repository ready for future privacy and UX features.
-- Document threat model and mitigation boundaries inside the repository.
-- Prefer "safe by default" behavior for Android-focused deployments.
+- Держать репозиторий готовым к следующим функциям для приватности и удобства использования.
+- Документировать модель угроз и границы защит прямо в репозитории.
+- Предпочитать поведение «безопасно по умолчанию» для Android-ориентированных сценариев.
 
-## Non-Goals
+## Что не является целью
 
-- Claiming that a client-only app can fully hide VPN usage from Android public APIs without root.
-- Replacing device-side root/Xposed masking for users who need stronger anti-detection guarantees.
+- Заявлять, что клиентское приложение способно полностью скрыть VPN от публичных Android API без root.
+- Подменять device-side root/Xposed masking для пользователей, которым нужна более сильная защита от детекта.

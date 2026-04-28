@@ -150,6 +150,8 @@
   "checkUpdate": "Проверить обновления",
   "discoverNewVersion": "Обнаружена новая версия",
   "checkUpdateError": "Текущее приложение уже является последней версией",
+  "later": "Позже",
+  "skipRelease": "Пропустить релиз",
   "goDownload": "Перейти к загрузке",
   "downloadAndInstall": "Скачать и установить",
   "updatePreparing": "Подготовка обновления",
