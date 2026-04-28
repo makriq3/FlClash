@@ -115,7 +115,7 @@ object State {
         }
     }
 
-    suspend fun syncState() {
+    suspend fun syncState(previousSharedState: SharedState? = null) {
         GlobalState.setCrashlytics(sharedState.crashlytics)
         Service.updateNotificationParams(
             NotificationParams(
@@ -125,6 +125,29 @@ object State {
             )
         )
         Service.setCrashlytics(sharedState.crashlytics)
+        restartServiceIfNeeded(previousSharedState)
+    }
+
+    private suspend fun restartServiceIfNeeded(previousSharedState: SharedState?) {
+        val previousVpnOptions = previousSharedState?.vpnOptions ?: return
+        val nextVpnOptions = sharedState.vpnOptions ?: return
+        runLock.withLock {
+            if (previousVpnOptions == nextVpnOptions || runStateFlow.value != RunState.START) {
+                return
+            }
+            GlobalState.log("Restarting Android service to apply updated vpnOptions")
+            val nextRunTime = runTime
+            try {
+                runStateFlow.tryEmit(RunState.PENDING)
+                Service.stopService()
+                runTime = Service.startService(nextVpnOptions, nextRunTime)
+                runStateFlow.tryEmit(RunState.START)
+            } finally {
+                if (runStateFlow.value == RunState.PENDING) {
+                    runStateFlow.tryEmit(RunState.STOP)
+                }
+            }
+        }
     }
 
     private suspend fun setupAndStart() {
@@ -200,6 +223,4 @@ object State {
         }
     }
 }
-
-
 

@@ -294,6 +294,104 @@ org.telegram.messenger
     );
   });
 
+  test(
+    'android profile split tunneling expands masks regex and exceptions against installed packages',
+    () async {
+      const installedPackageNames = [
+        'ru.yandex.music',
+        'ru.yandex.browser',
+        'org.mozilla.firefox',
+        'com.termux',
+      ];
+
+      final normalized = await normalizeAndroidProfileAccessControlConfig(
+        {
+          'tun': {
+            'exclude-package': [
+              '*.yandex.*',
+              '!ru.yandex.browser',
+              r're:^org\.mozilla\..+$',
+            ],
+          },
+        },
+        isAndroid: true,
+        installedPackageNames: installedPackageNames,
+      );
+
+      expect(normalized['tun']['exclude-package'], [
+        'ru.yandex.music',
+        'org.mozilla.firefox',
+      ]);
+
+      final resolved = resolveAndroidProfileAccessControlOverride(
+        normalized,
+        isAndroid: true,
+        installedPackageNames: installedPackageNames,
+      );
+      expect(resolved?.mode, AccessControlMode.rejectSelected);
+      expect(resolved?.rejectList, [
+        'ru.yandex.music',
+        'org.mozilla.firefox',
+      ]);
+    },
+  );
+
+  test(
+    'android profile split tunneling keeps selector order across file lists',
+    () async {
+      final profilesDir = await Directory.systemTemp.createTemp(
+        'flclash-pattern-file-',
+      );
+      addTearDown(() async {
+        await profilesDir.delete(recursive: true);
+      });
+      final packagesFile = File('${profilesDir.path}/include.txt');
+      await packagesFile.writeAsString('''
+com.termux
+*.yandex.*
+!ru.yandex.browser
+''');
+
+      final normalized = await normalizeAndroidProfileAccessControlConfig(
+        {
+          'tun': {
+            'include-package-file': 'include.txt',
+          },
+        },
+        isAndroid: true,
+        profilesPath: profilesDir.path,
+        installedPackageNames: const [
+          'ru.yandex.music',
+          'org.mozilla.firefox',
+          'com.termux',
+          'ru.yandex.browser',
+        ],
+      );
+
+      expect(normalized['tun']['include-package'], [
+        'com.termux',
+        'ru.yandex.music',
+      ]);
+    },
+  );
+
+  test(
+    'android profile split tunneling rejects dynamic selectors without installed package metadata',
+    () {
+      expect(
+        () => resolveAndroidProfileAccessControlOverride(
+          {
+            'tun': {
+              'exclude-package': ['*.yandex.*'],
+            },
+          },
+          isAndroid: true,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+
   test('resolved tun route-address is propagated into vpn options', () {
     const options = VpnOptions(
       enable: true,

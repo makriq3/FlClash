@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:fl_clash/common/print.dart';
 import 'package:fl_clash/common/request.dart';
 import 'package:fl_clash/common/string.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -22,12 +23,21 @@ Future<Map<String, dynamic>> normalizeAndroidProfileAccessControlConfig(
   required bool isAndroid,
   String? profilesPath,
   int? profileId,
+  List<String> installedPackageNames = const [],
 }) async {
   if (!isAndroid) {
     return rawConfig;
   }
 
   final tun = _asStringKeyedMap(rawConfig['tun']);
+  final inlineIncludeSelectors = _asPackageSelectorList(
+    tun['include-package'],
+    fieldName: 'tun.include-package',
+  );
+  final inlineExcludeSelectors = _asPackageSelectorList(
+    tun['exclude-package'],
+    fieldName: 'tun.exclude-package',
+  );
   final includePackageSources = _asPackageListSources(
     tun['include-package-file'],
     fieldName: 'tun.include-package-file',
@@ -55,48 +65,66 @@ Future<Map<String, dynamic>> normalizeAndroidProfileAccessControlConfig(
     ...excludePackageUrls,
   ];
 
-  if (mergedIncludeSources.isEmpty && mergedExcludeSources.isEmpty) {
+  if (inlineIncludeSelectors.isEmpty &&
+      inlineExcludeSelectors.isEmpty &&
+      mergedIncludeSources.isEmpty &&
+      mergedExcludeSources.isEmpty) {
     return rawConfig;
   }
 
   final resolvedProfilesPath = profilesPath?.trim();
-  if (resolvedProfilesPath == null || resolvedProfilesPath.isEmpty) {
+  if ((mergedIncludeSources.isNotEmpty || mergedExcludeSources.isNotEmpty) &&
+      (resolvedProfilesPath == null || resolvedProfilesPath.isEmpty)) {
     throw const FormatException(
       'Android profile split tunneling file lists require a valid profiles path.',
     );
   }
 
   final normalizedTun = Map<String, dynamic>.from(tun);
-  final includePackages = <String>{
-    ..._asPackageList(
-      normalizedTun['include-package'],
-      fieldName: 'tun.include-package',
-    ),
+  final includeSelectors = <String>[
+    ...inlineIncludeSelectors,
     ...await _readPackageLists(
       mergedIncludeSources,
-      profilesPath: resolvedProfilesPath,
+      profilesPath: resolvedProfilesPath ?? '',
       profileId: profileId,
       fieldName: 'tun.include-package-file',
     ),
-  }.toList();
-  final excludePackages = <String>{
-    ..._asPackageList(
-      normalizedTun['exclude-package'],
-      fieldName: 'tun.exclude-package',
-    ),
+  ];
+  final excludeSelectors = <String>[
+    ...inlineExcludeSelectors,
     ...await _readPackageLists(
       mergedExcludeSources,
-      profilesPath: resolvedProfilesPath,
+      profilesPath: resolvedProfilesPath ?? '',
       profileId: profileId,
       fieldName: 'tun.exclude-package-file',
     ),
-  }.toList();
+  ];
+  if (includeSelectors.isNotEmpty && excludeSelectors.isNotEmpty) {
+    throw const FormatException(
+      'Android profile split tunneling is ambiguous: use either '
+      '`tun.include-package` or `tun.exclude-package`, not both.',
+    );
+  }
+  final includePackages = _resolvePackageSelectors(
+    includeSelectors,
+    fieldName: 'tun.include-package',
+    installedPackageNames: installedPackageNames,
+  );
+  final excludePackages = _resolvePackageSelectors(
+    excludeSelectors,
+    fieldName: 'tun.exclude-package',
+    installedPackageNames: installedPackageNames,
+  );
 
   if (includePackages.isNotEmpty) {
     normalizedTun['include-package'] = includePackages;
+  } else {
+    normalizedTun.remove('include-package');
   }
   if (excludePackages.isNotEmpty) {
     normalizedTun['exclude-package'] = excludePackages;
+  } else {
+    normalizedTun.remove('exclude-package');
   }
   normalizedTun.remove('include-package-file');
   normalizedTun.remove('exclude-package-file');
@@ -111,27 +139,39 @@ Future<Map<String, dynamic>> normalizeAndroidProfileAccessControlConfig(
 AccessControlProps? resolveAndroidProfileAccessControlOverride(
   Map<String, dynamic> rawConfig, {
   required bool isAndroid,
+  List<String> installedPackageNames = const [],
 }) {
   if (!isAndroid) {
     return null;
   }
 
   final tun = _asStringKeyedMap(rawConfig['tun']);
-  final includePackages = _asPackageList(
+  final includeSelectors = _asPackageSelectorList(
     tun['include-package'],
     fieldName: 'tun.include-package',
   );
-  final excludePackages = _asPackageList(
+  final excludeSelectors = _asPackageSelectorList(
     tun['exclude-package'],
     fieldName: 'tun.exclude-package',
   );
 
-  if (includePackages.isNotEmpty && excludePackages.isNotEmpty) {
+  if (includeSelectors.isNotEmpty && excludeSelectors.isNotEmpty) {
     throw const FormatException(
       'Android profile split tunneling is ambiguous: use either '
       '`tun.include-package` or `tun.exclude-package`, not both.',
     );
   }
+
+  final includePackages = _resolvePackageSelectors(
+    includeSelectors,
+    fieldName: 'tun.include-package',
+    installedPackageNames: installedPackageNames,
+  );
+  final excludePackages = _resolvePackageSelectors(
+    excludeSelectors,
+    fieldName: 'tun.exclude-package',
+    installedPackageNames: installedPackageNames,
+  );
 
   if (includePackages.isNotEmpty) {
     return AccessControlProps(
@@ -365,7 +405,7 @@ List<String> _asStringList(dynamic value) {
   return value.map((item) => item.toString()).toList();
 }
 
-List<String> _asPackageList(dynamic value, {required String fieldName}) {
+List<String> _asPackageSelectorList(dynamic value, {required String fieldName}) {
   if (value == null) {
     return const [];
   }
@@ -375,18 +415,19 @@ List<String> _asPackageList(dynamic value, {required String fieldName}) {
   }
   if (value is! List) {
     throw FormatException(
-      'Profile field `$fieldName` must be a YAML list of Android package names.',
+      'Profile field `$fieldName` must be a YAML list of Android package '
+      'selectors.',
     );
   }
-  final packages = <String>{};
+  final selectors = <String>[];
   for (final item in value) {
     final normalized = item.toString().trim();
     if (normalized.isEmpty) {
       continue;
     }
-    packages.add(normalized);
+    selectors.add(normalized);
   }
-  return packages.toList();
+  return selectors;
 }
 
 List<_PackageListSource> _asPackageListSources(
@@ -507,7 +548,7 @@ Future<List<String>> _readPackageLists(
   int? profileId,
   required String fieldName,
 }) async {
-  final packages = <String>{};
+  final packages = <String>[];
   for (final source in sources) {
     final sourceFieldName = source.url != null
         ? fieldName.replaceAll('-file', '-url')
@@ -524,15 +565,15 @@ Future<List<String>> _readPackageLists(
             profilesPath: profilesPath,
             fieldName: sourceFieldName,
           );
-    packages.addAll(
-      _parsePackageListFileContent(
+    packages.addAll([
+      ..._parsePackageListFileContent(
         content,
         fieldName: sourceFieldName,
         path: source.url ?? source.path ?? sourceFieldName,
       ),
-    );
+    ]);
   }
-  return packages.toList();
+  return packages;
 }
 
 Future<String> _readPackageListFromLocalSource(
@@ -655,11 +696,14 @@ List<String> _parsePackageListFileContent(
   try {
     final yamlContent = loadYaml(trimmed);
     if (yamlContent is List || yamlContent is YamlList) {
-      return _asPackageList(yamlContent, fieldName: '$fieldName ($path)');
+      return _asPackageSelectorList(
+        yamlContent,
+        fieldName: '$fieldName ($path)',
+      );
     }
   } catch (_) {}
 
-  final packages = <String>{};
+  final selectors = <String>[];
   for (var line in const LineSplitter().convert(content)) {
     var normalized = line.trim();
     if (normalized.isEmpty || normalized.startsWith('#')) {
@@ -675,9 +719,80 @@ List<String> _parsePackageListFileContent(
     if (normalized.isEmpty || normalized.startsWith('#')) {
       continue;
     }
-    packages.add(normalized);
+    selectors.add(normalized);
   }
-  return packages.toList();
+  return selectors;
+}
+
+List<String> _resolvePackageSelectors(
+  List<String> selectors, {
+  required String fieldName,
+  required List<String> installedPackageNames,
+}) {
+  if (selectors.isEmpty) {
+    return const [];
+  }
+
+  final compiledSelectors = selectors
+      .map(
+        (selector) => _CompiledPackageSelector.parse(
+          selector,
+          fieldName: fieldName,
+        ),
+      )
+      .toList();
+  final normalizedInstalledPackages = LinkedHashSet<String>.from(
+    installedPackageNames
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty),
+  ).toList();
+
+  if (normalizedInstalledPackages.isEmpty) {
+    final hasDynamicSelectors = compiledSelectors.any(
+      (selector) => selector.isDynamic,
+    );
+    if (hasDynamicSelectors) {
+      throw FormatException(
+        'Profile field `$fieldName` uses package masks, regular expressions, '
+        'or negated rules, but no installed Android package list is '
+        'available to resolve them.',
+      );
+    }
+    return LinkedHashSet<String>.from(
+      compiledSelectors.map((selector) => selector.pattern),
+    ).toList();
+  }
+
+  final matchCounters = List<int>.filled(compiledSelectors.length, 0);
+  final resolvedPackages = <String>{};
+  for (var index = 0; index < compiledSelectors.length; index++) {
+    final selector = compiledSelectors[index];
+    final matches = normalizedInstalledPackages
+        .where(selector.matches)
+        .toList();
+    matchCounters[index] = matches.length;
+    if (matches.isEmpty) {
+      continue;
+    }
+    if (selector.include) {
+      resolvedPackages.addAll(matches);
+    } else {
+      resolvedPackages.removeAll(matches);
+    }
+  }
+
+  for (var index = 0; index < compiledSelectors.length; index++) {
+    if (matchCounters[index] != 0) {
+      continue;
+    }
+    commonPrint.log(
+      'Android package selector `${compiledSelectors[index].raw}` in '
+      '`$fieldName` matched no installed applications.',
+      logLevel: LogLevel.warning,
+    );
+  }
+
+  return resolvedPackages.toList();
 }
 
 String? _convertBypassPatternToDirectRule(String rawPattern) {
@@ -758,6 +873,88 @@ bool _isValidOctets(List<String?> octets) {
     final value = int.tryParse(octet ?? '');
     return value != null && value >= 0 && value <= 255;
   });
+}
+
+final class _CompiledPackageSelector {
+  const _CompiledPackageSelector({
+    required this.raw,
+    required this.pattern,
+    required this.include,
+    required this.matcher,
+    required this.isDynamic,
+  });
+
+  final String raw;
+  final String pattern;
+  final bool include;
+  final bool isDynamic;
+  final bool Function(String packageName) matcher;
+
+  bool matches(String packageName) => matcher(packageName);
+
+  static _CompiledPackageSelector parse(
+    String rawValue, {
+    required String fieldName,
+  }) {
+    final normalized = rawValue.trim();
+    final isNegated = normalized.startsWith('!');
+    final selectorBody = isNegated ? normalized.substring(1).trim() : normalized;
+    if (selectorBody.isEmpty) {
+      throw FormatException(
+        'Profile field `$fieldName` contains an empty Android package selector: '
+        '$rawValue',
+      );
+    }
+
+    final regexBody = _extractRegexBody(selectorBody);
+    if (regexBody != null) {
+      try {
+        final regex = RegExp(regexBody);
+        return _CompiledPackageSelector(
+          raw: normalized,
+          pattern: selectorBody,
+          include: !isNegated,
+          isDynamic: true,
+          matcher: regex.hasMatch,
+        );
+      } catch (error) {
+        throw FormatException(
+          'Profile field `$fieldName` contains an invalid package regular '
+          'expression `$selectorBody`: $error',
+        );
+      }
+    }
+
+    if (selectorBody.contains('*')) {
+      final glob = RegExp(
+        '^${RegExp.escape(selectorBody).replaceAll(r'\*', '.*')}\$',
+      );
+      return _CompiledPackageSelector(
+        raw: normalized,
+        pattern: selectorBody,
+        include: !isNegated,
+        isDynamic: true,
+        matcher: glob.hasMatch,
+      );
+    }
+
+    return _CompiledPackageSelector(
+      raw: normalized,
+      pattern: selectorBody,
+      include: !isNegated,
+      isDynamic: isNegated,
+      matcher: (packageName) => packageName == selectorBody,
+    );
+  }
+}
+
+String? _extractRegexBody(String selector) {
+  for (final prefix in const ['re:', 'regex:', 'regexp:']) {
+    if (selector.startsWith(prefix)) {
+      return selector.substring(prefix.length);
+    }
+  }
+  return null;
 }
 
 class _PackageListSource {

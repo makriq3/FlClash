@@ -107,9 +107,10 @@ class ServicePlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
 
     private fun handleSyncState(call: MethodCall, result: MethodChannel.Result) {
         val data = call.arguments<String>()!!
+        val previousSharedState = State.sharedState
         State.sharedState = Gson().fromJson(data, SharedState::class.java)
         launch {
-            State.syncState()
+            State.syncState(previousSharedState)
             result.success("")
         }
     }
