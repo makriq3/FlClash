@@ -122,15 +122,16 @@ Future<Map<String, dynamic>> _makeRealProfileTask(
   rawConfig['find-process-mode'] = realPatchConfig.findProcessMode.name;
   rawConfig['allow-lan'] = realPatchConfig.allowLan;
   rawConfig['mode'] = realPatchConfig.mode.name;
-  if (rawConfig['tun'] == null) {
-    rawConfig['tun'] = {};
-  }
-  rawConfig['tun']['enable'] = realPatchConfig.tun.enable;
-  rawConfig['tun']['device'] = realPatchConfig.tun.device;
-  rawConfig['tun']['dns-hijack'] = realPatchConfig.tun.dnsHijack;
-  rawConfig['tun']['stack'] = realPatchConfig.tun.stack.name;
-  rawConfig['tun']['route-address'] = realPatchConfig.tun.routeAddress;
-  rawConfig['tun']['auto-route'] = realPatchConfig.tun.autoRoute;
+  final rawTun = rawConfig['tun'] is Map
+      ? Map<String, dynamic>.from(rawConfig['tun'] as Map)
+      : <String, dynamic>{};
+  rawTun['enable'] = realPatchConfig.tun.enable;
+  rawTun['device'] = realPatchConfig.tun.device;
+  rawTun['dns-hijack'] = realPatchConfig.tun.dnsHijack;
+  rawTun['stack'] = realPatchConfig.tun.stack.name;
+  rawTun['route-address'] ??= realPatchConfig.tun.routeAddress;
+  rawTun['auto-route'] ??= realPatchConfig.tun.autoRoute;
+  rawConfig['tun'] = rawTun;
   rawConfig['geodata-loader'] = realPatchConfig.geodataLoader.name;
   if (rawConfig['sniffer']?['sniff'] != null) {
     for (final value in (rawConfig['sniffer']?['sniff'] as Map).values) {

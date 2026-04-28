@@ -1,7 +1,7 @@
 name: fl_clash
 description: Независимый релиз FlClash от makriq с упором на защиту Android и улучшенное обновление приложения.
 publish_to: 'none'
-version: 0.9.1+2026041603
+version: 0.9.1+2026042301
 environment:
   sdk: '>=3.8.0 <4.0.0'
 
@@ -51,7 +51,7 @@ dependencies:
   flutter_riverpod: ^3.0.0
   riverpod_annotation: ^3.0.0
   riverpod: ^3.0.0
-  material_color_utilities: ^0.11.1
+  material_color_utilities: ">=0.11.1 <0.14.0"
   flutter_js: ^0.8.7
   flutter_svg: ^2.1.0
   flutter_cache_manager: ^3.4.1

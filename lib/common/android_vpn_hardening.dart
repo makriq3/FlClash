@@ -47,6 +47,71 @@ bool shouldRequestInstalledPackageAccessForAndroidProfile(
       tun['exclude-package-url'] != null;
 }
 
+Future<Map<String, dynamic>> restoreRawAndroidProfileAccessControlConfig(
+  Map<String, dynamic> parsedConfig, {
+  required bool isAndroid,
+  String? profilePath,
+}) async {
+  if (!isAndroid) {
+    return parsedConfig;
+  }
+
+  final resolvedProfilePath = profilePath?.trim();
+  if (resolvedProfilePath == null || resolvedProfilePath.isEmpty) {
+    return parsedConfig;
+  }
+
+  final profileFile = File(resolvedProfilePath);
+  if (!await profileFile.exists()) {
+    return parsedConfig;
+  }
+
+  try {
+    final yamlContent = loadYaml(await profileFile.readAsString());
+    if (yamlContent is! Map && yamlContent is! YamlMap) {
+      return parsedConfig;
+    }
+
+    final rawTun = _asStringKeyedMap((yamlContent as dynamic)['tun']);
+    if (rawTun.isEmpty) {
+      return parsedConfig;
+    }
+
+    final mergedTun = Map<String, dynamic>.from(
+      _asStringKeyedMap(parsedConfig['tun']),
+    );
+    var changed = false;
+    for (final key in const [
+      'include-package',
+      'exclude-package',
+      'include-package-file',
+      'exclude-package-file',
+      'include-package-url',
+      'exclude-package-url',
+    ]) {
+      if (!rawTun.containsKey(key)) {
+        continue;
+      }
+      mergedTun[key] = _materializeYamlValue(rawTun[key]);
+      changed = true;
+    }
+    if (!changed) {
+      return parsedConfig;
+    }
+
+    final mergedConfig = Map<String, dynamic>.from(parsedConfig);
+    mergedConfig['tun'] = mergedTun;
+    return mergedConfig;
+  } catch (error) {
+    commonPrint.log(
+      'Failed to restore raw Android split tunneling fields from '
+      '`$resolvedProfilePath`: $error',
+      logLevel: LogLevel.warning,
+    );
+    return parsedConfig;
+  }
+}
+
 Future<Map<String, dynamic>> normalizeAndroidProfileAccessControlConfig(
   Map<String, dynamic> rawConfig, {
   required bool isAndroid,
@@ -110,37 +175,57 @@ Future<Map<String, dynamic>> normalizeAndroidProfileAccessControlConfig(
   }
 
   final normalizedTun = Map<String, dynamic>.from(tun);
-  final includeSelectors = <String>[
-    ...inlineIncludeSelectors,
-    ...await _readPackageLists(
+  final includeSelectorEntries = <_PackageSelectorEntry>[
+    ...inlineIncludeSelectors.map(
+      (selector) => _PackageSelectorEntry(
+        value: selector,
+        preserveExactSelectorWithoutInstalledPackages: true,
+      ),
+    ),
+    ...(await _readPackageLists(
       mergedIncludeSources,
       profilesPath: resolvedProfilesPath ?? '',
       profileId: profileId,
       fieldName: 'tun.include-package-file',
+    )).map(
+      (selector) => _PackageSelectorEntry(
+        value: selector,
+        preserveExactSelectorWithoutInstalledPackages: false,
+      ),
     ),
   ];
-  final excludeSelectors = <String>[
-    ...inlineExcludeSelectors,
-    ...await _readPackageLists(
+  final excludeSelectorEntries = <_PackageSelectorEntry>[
+    ...inlineExcludeSelectors.map(
+      (selector) => _PackageSelectorEntry(
+        value: selector,
+        preserveExactSelectorWithoutInstalledPackages: true,
+      ),
+    ),
+    ...(await _readPackageLists(
       mergedExcludeSources,
       profilesPath: resolvedProfilesPath ?? '',
       profileId: profileId,
       fieldName: 'tun.exclude-package-file',
+    )).map(
+      (selector) => _PackageSelectorEntry(
+        value: selector,
+        preserveExactSelectorWithoutInstalledPackages: false,
+      ),
     ),
   ];
-  if (includeSelectors.isNotEmpty && excludeSelectors.isNotEmpty) {
+  if (includeSelectorEntries.isNotEmpty && excludeSelectorEntries.isNotEmpty) {
     throw const FormatException(
       'Android profile split tunneling is ambiguous: use either '
       '`tun.include-package` or `tun.exclude-package`, not both.',
     );
   }
   final includePackages = _resolvePackageSelectors(
-    includeSelectors,
+    includeSelectorEntries,
     fieldName: 'tun.include-package',
     installedPackageNames: installedPackageNames,
   );
   final excludePackages = _resolvePackageSelectors(
-    excludeSelectors,
+    excludeSelectorEntries,
     fieldName: 'tun.exclude-package',
     installedPackageNames: installedPackageNames,
   );
@@ -192,12 +277,26 @@ AccessControlProps? resolveAndroidProfileAccessControlOverride(
   }
 
   final includePackages = _resolvePackageSelectors(
-    includeSelectors,
+    includeSelectors
+        .map(
+          (selector) => _PackageSelectorEntry(
+            value: selector,
+            preserveExactSelectorWithoutInstalledPackages: true,
+          ),
+        )
+        .toList(),
     fieldName: 'tun.include-package',
     installedPackageNames: installedPackageNames,
   );
   final excludePackages = _resolvePackageSelectors(
-    excludeSelectors,
+    excludeSelectors
+        .map(
+          (selector) => _PackageSelectorEntry(
+            value: selector,
+            preserveExactSelectorWithoutInstalledPackages: true,
+          ),
+        )
+        .toList(),
     fieldName: 'tun.exclude-package',
     installedPackageNames: installedPackageNames,
   );
@@ -427,6 +526,19 @@ Map<String, dynamic> _asStringKeyedMap(dynamic value) {
   return value.map((key, mapValue) => MapEntry(key.toString(), mapValue));
 }
 
+dynamic _materializeYamlValue(dynamic value) {
+  if (value is Map || value is YamlMap) {
+    return value.map(
+      (key, mapValue) =>
+          MapEntry(key.toString(), _materializeYamlValue(mapValue)),
+    );
+  }
+  if (value is List || value is YamlList) {
+    return value.map(_materializeYamlValue).toList();
+  }
+  return value;
+}
+
 List<String> _asStringList(dynamic value) {
   if (value is! List) {
     return const [];
@@ -434,7 +546,10 @@ List<String> _asStringList(dynamic value) {
   return value.map((item) => item.toString()).toList();
 }
 
-List<String> _asPackageSelectorList(dynamic value, {required String fieldName}) {
+List<String> _asPackageSelectorList(
+  dynamic value, {
+  required String fieldName,
+}) {
   if (value == null) {
     return const [];
   }
@@ -692,8 +807,11 @@ String _resolvePackageListPath(
     );
   }
   final canonicalProfilesPath =
-      _tryResolveCanonicalPath(normalizedProfilesPath) ?? normalizedProfilesPath;
-  final canonicalResolvedPath = _resolvePathAgainstExistingAncestor(resolvedPath);
+      _tryResolveCanonicalPath(normalizedProfilesPath) ??
+      normalizedProfilesPath;
+  final canonicalResolvedPath = _resolvePathAgainstExistingAncestor(
+    resolvedPath,
+  );
   if (!_isPathWithinDirectory(canonicalResolvedPath, canonicalProfilesPath)) {
     throw FormatException(
       'Package list path for `$fieldName` must stay within the profiles '
@@ -758,11 +876,7 @@ String _resolvePackageListCachePath(
   }
   final rawPath = source.path?.trim();
   if (rawPath != null && rawPath.isNotEmpty) {
-    return _resolvePackageListPath(
-      rawPath,
-      profilesPath,
-      fieldName: fieldName,
-    );
+    return _resolvePackageListPath(rawPath, profilesPath, fieldName: fieldName);
   }
   if (profileId == null) {
     throw FormatException(
@@ -827,7 +941,7 @@ List<String> _parsePackageListFileContent(
 }
 
 List<String> _resolvePackageSelectors(
-  List<String> selectors, {
+  List<_PackageSelectorEntry> selectors, {
   required String fieldName,
   required List<String> installedPackageNames,
 }) {
@@ -838,7 +952,7 @@ List<String> _resolvePackageSelectors(
   final compiledSelectors = selectors
       .map(
         (selector) => _CompiledPackageSelector.parse(
-          selector,
+          selector.value,
           fieldName: fieldName,
         ),
       )
@@ -851,11 +965,22 @@ List<String> _resolvePackageSelectors(
 
   if (normalizedInstalledPackages.isEmpty) {
     final resolvedPackages = <String>{};
-    for (final selector in compiledSelectors) {
+    for (var index = 0; index < compiledSelectors.length; index++) {
+      final selector = compiledSelectors[index];
+      final selectorEntry = selectors[index];
       if (selector.requiresInstalledPackageScan) {
         commonPrint.log(
           'Android package selector `${selector.raw}` in `$fieldName` was '
           'ignored because no installed applications list is available.',
+          logLevel: LogLevel.warning,
+        );
+        continue;
+      }
+      if (!selectorEntry.preserveExactSelectorWithoutInstalledPackages) {
+        commonPrint.log(
+          'Android package selector `${selector.raw}` in `$fieldName` was '
+          'ignored because it came from an external package list and no '
+          'installed applications list is available.',
           logLevel: LogLevel.warning,
         );
         continue;
@@ -1004,7 +1129,9 @@ final class _CompiledPackageSelector {
   }) {
     final normalized = rawValue.trim();
     final isNegated = normalized.startsWith('!');
-    final selectorBody = isNegated ? normalized.substring(1).trim() : normalized;
+    final selectorBody = isNegated
+        ? normalized.substring(1).trim()
+        : normalized;
     if (selectorBody.isEmpty) {
       throw FormatException(
         'Profile field `$fieldName` contains an empty Android package selector: '
@@ -1072,6 +1199,16 @@ bool _selectorNeedsInstalledPackageAccess(String rawSelector) {
       ? normalized.substring(1).trim()
       : normalized;
   return selectorBody.contains('*') || _extractRegexBody(selectorBody) != null;
+}
+
+class _PackageSelectorEntry {
+  final String value;
+  final bool preserveExactSelectorWithoutInstalledPackages;
+
+  const _PackageSelectorEntry({
+    required this.value,
+    required this.preserveExactSelectorWithoutInstalledPackages,
+  });
 }
 
 class _PackageListSource {

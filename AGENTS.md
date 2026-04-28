@@ -4,11 +4,11 @@
 
 ### Working Context
 
-- Repository fork created under `makriq3/FlClash`.
+- Repository fork created under `makriq-org/FlClash`.
 - Local repo path: `/home/max/Projects/Prod/FlClash`.
 - Current upstream HEAD at inspection time: commit `672eacc` (`Update changelog`).
 - Git remotes:
-  - `origin` -> `https://github.com/makriq3/FlClash.git`
+  - `origin` -> `https://github.com/makriq-org/FlClash.git`
   - `upstream` -> `https://github.com/chen08209/FlClash.git`
 
 ### App Architecture
@@ -146,7 +146,7 @@
 ### Build / CI Notes
 
 - Existing GitHub Actions workflow in this repo builds Android artifacts, but currently triggers on tag push (`v*`) rather than branch push / manual testing flow.
-- For fast iteration in fork `makriq3/FlClash`, a dedicated Android test/build workflow will likely be needed so heavy builds happen in GitHub Actions without local machine load.
+- For fast iteration in fork `makriq-org/FlClash`, a dedicated Android test/build workflow will likely be needed so heavy builds happen in GitHub Actions without local machine load.
 - Because the risk here is mostly runtime behavior, validation should combine:
   - code-level assertions for generated config / safe defaults,
   - CI-built APK artifacts,
@@ -218,6 +218,64 @@
 - `Tun.getRealTun(RouteMode routeMode)` resolves:
   - `RouteMode.config` -> user config `tun.route-address`
   - `RouteMode.bypassPrivate` -> `defaultBypassPrivateRouteAddress`
+
+### Subscription Deep Link + Auto Update Research (2026-04-13)
+
+- Android app already declares a custom-scheme deep link on `MainActivity`:
+  - file: `android/app/src/main/AndroidManifest.xml`
+  - activity is `android:exported="true"` and `android:launchMode="singleTop"`
+  - deep-link intent filter:
+    - action: `android.intent.action.VIEW`
+    - categories: `DEFAULT`, `BROWSABLE`
+    - schemes: `clash`, `clashmeta`, `flclash`
+    - host: `install-config`
+- Current in-app deep-link parser:
+  - file: `lib/common/link.dart`
+  - listens via `app_links`
+  - accepts only links where `uri.host == 'install-config'`
+  - expects query parameter `url`
+  - current effective link shape is:
+    - `flclash://install-config?url=<percent-encoded-config-url>`
+    - same parser also accepts `clash://...` and `clashmeta://...`
+- Current app behavior after link reception:
+  - file: `lib/controller.dart`
+  - `initLink()` subscribes to `linkManager.initAppLinksListen(...)`
+  - after a link arrives, the app shows a confirmation dialog first
+  - only after user confirms, it calls `addProfileFormURL(url)`
+- Current profile creation path for URL subscriptions:
+  - file: `lib/controller.dart`
+  - `addProfileFormURL(String url)`:
+    - pops to root page
+    - navigates to Profiles
+    - creates a new profile with `Profile.normal(url: url).update()`
+    - saves it with `putProfile(profile)`
+- Important UX/product gaps for the requested "tap link and subscription is added immediately" flow:
+  - the confirmation dialog is the main extra user step and must be removed or bypassed for trusted install links
+  - current flow appears to create a fresh profile on every accepted link tap; there is no existing deduplication by subscription URL
+  - current link integration only subscribes to `uriLinkStream`; there is no explicit `getInitialLink()` handling in app code
+  - `app_links` documentation says the plugin should be instantiated early to catch the first cold-start link; current app initializes link listening only after Flutter app attach / first frame in `lib/application.dart`
+- `app_links` reference checked:
+  - package docs expose `uriLinkStream`, `getInitialLink()`, and `getLatestLink()`
+  - docs explicitly recommend instantiating `AppLinks` early to catch the very first cold-state link
+- Current default auto-update interval for new URL profiles:
+  - file: `lib/common/constant.dart`
+  - `defaultUpdateDuration = Duration(days: 1)`
+  - file: `lib/models/profile.dart`
+  - `Profile.normal(...)` uses `defaultUpdateDuration`
+- Persistence details for auto-update:
+  - file: `lib/database/profiles.dart`
+  - each profile stores concrete `autoUpdateDurationMillis` in DB
+  - changing `defaultUpdateDuration` will affect newly created profiles, not already saved ones
+- Current edit UI for subscriptions:
+  - file: `lib/views/profiles/edit.dart`
+  - interval is shown/edited in minutes via `profile.autoUpdateDuration.inMinutes`
+  - no extra migration logic exists for old values
+- Existing CI path suitable for remote validation through GitHub Actions on `makriq-org/FlClash`:
+  - file: `.github/workflows/android-branch-build.yml`
+  - triggers on `workflow_dispatch` and pushes to `main`, `codex/**`, `feature/**`, `fix/**`
+  - runs `flutter test test/common`
+  - builds Android artifacts via `dart setup.dart android`
+  - uploads artifacts from `dist/`
   - if the final list is empty on mobile, `auto-route=true`; otherwise `auto-route=false`
 
 ### Confirmed Android Service Gap
@@ -247,10 +305,10 @@
   - current fork users will not get correct fork updates until the release source is switched or abstracted.
 
 - Verified live release state at research time:
-  - fork `makriq3/FlClash` latest release:
+  - fork `makriq-org/FlClash` latest release:
     - tag: `v0.8.93`
     - published: `2026-04-12`
-    - release page: `https://github.com/makriq3/FlClash/releases/tag/v0.8.93`
+    - release page: `https://github.com/makriq-org/FlClash/releases/tag/v0.8.93`
   - upstream `chen08209/FlClash` latest release:
     - tag: `v0.8.92`
     - published: `2026-02-02`
@@ -368,7 +426,7 @@
 ### Implemented Android Self-Update Direction (2026-04-12)
 
 - The client is now being reoriented to the fork release channel:
-  - `repository` should point to `makriq3/FlClash`, not upstream.
+  - `repository` should point to `makriq-org/FlClash`, not upstream.
   - this affects:
     - update checks
     - About -> Project link
@@ -452,7 +510,7 @@
 - User-facing upstream traces removed from product surface:
   - About screen no longer links to upstream Telegram / upstream core page
   - packaging metadata now publishes under `makriq`
-  - release helper URLs point to `makriq3/FlClash`
+  - release helper URLs point to `makriq-org/FlClash`
   - public README files now describe the repo as an independent release line rather than an upstream-facing fork
 - Dependency independence improvement:
   - `flutter_js` and `yaml_writer` were moved from upstream-owned GitHub git refs to neutral `pub.dev` packages
@@ -632,7 +690,7 @@
 ### Branch Cleanup And Release Channel Simplification (2026-04-13)
 
 - Repository state after `v0.8.96` verification:
-  - `main` is the default branch on `makriq3/FlClash`
+  - `main` is the default branch on `makriq-org/FlClash`
   - `latestRelease` on GitHub is `v0.8.96`
   - fork still had extra remote branches:
     - `codex/android-self-update`
@@ -711,3 +769,97 @@
     - short footer
   - rewrite `v0.8.97` changelog entry in release-note style
   - update the already published `v0.8.97` body in place so users do not keep seeing the bad format
+
+### Android Connectivity Regression After Update-System Rollout (2026-04-13)
+
+- User-reported symptom to investigate:
+  - after the recent update-system work, Android no longer connects to any server
+  - even the dashboard current IP / direct IP widget does not resolve and stays in loading state
+- Most relevant regression window in fork history:
+  - last clearly pre-update tag: `v0.8.96` (`5cc0654`, 2026-04-12)
+  - update-system introduction: `5cd063d` (`Add Android self-update flow`, 2026-04-12)
+  - adjacent Android namespace / runtime churn:
+    - `7996e3b` (`Rebrand app identifiers for standalone release`, 2026-04-12)
+    - `a565f2d` (`Finalize production rebrand cleanup`, 2026-04-12)
+  - latest UI-only refinement on top:
+    - `ec0f8d1` (`Refine Android update dialog`, 2026-04-13)
+- Confirmed startup / update facts from current code:
+  - `AppController._init()` calls `autoCheckUpdate()` very early and **without `await`**
+  - this happens before:
+    - `_connectCore()`
+    - `_initCore()`
+    - `_initStatus()`
+  - file: `lib/controller.dart`
+  - current auto-update path does:
+    - GitHub `releases/latest` request against `makriq-org/FlClash`
+    - release dialog rendering
+    - on Android, APK download / checksum verification / installer launch
+  - files:
+    - `lib/common/request.dart`
+    - `lib/common/update.dart`
+    - `lib/widgets/update_dialog.dart`
+- Important negative finding:
+  - the self-update commits do **not** directly change:
+    - Android TUN startup
+    - profile generation / `applyProfile(...)`
+    - proxy group fetch via `coreController.getProxiesGroups(...)`
+    - provider fetch via `coreController.getExternalProviders()`
+    - IP-check source list or parsing logic
+  - meaning:
+    - the update-system path is a valid regression suspect because it now runs during startup
+    - but the raw connection failure is not yet explained by a direct network-config diff inside those commits alone
+- Broader Android risk surface in the same release band:
+  - `7996e3b` renamed Android package / namespace / AIDL / manifest / service paths from `com.follow.clash` to `com.makriq.flclash`
+  - this touched:
+    - app module Kotlin entrypoints
+    - Android common module helpers and component routing
+    - service module AIDL and `VpnService`
+    - plugin wiring
+  - this change set is much larger and operationally riskier than the update dialog itself
+  - if the bug appeared "after update-system work", the real regression could still live in the adjacent rebrand/runtime churn rather than in release-check UI code
+- Symptom-to-code mapping already confirmed:
+  - empty / never-ready proxy state is populated through:
+    - `AppController.applyProfile()`
+    - `_setupConfig()`
+    - `updateGroups()`
+    - `updateProviders()`
+  - files:
+    - `lib/controller.dart`
+    - `lib/core/controller.dart`
+  - current IP widget is driven by:
+    - `NetworkDetection.startCheck()`
+    - `NetworkDetection._checkIp()`
+  - file:
+    - `lib/providers/app.dart`
+- Confirmed dashboard IP-state bug that can amplify the symptom:
+  - `NetworkDetection._checkIp()` sets `state = isLoading:true, ipInfo:null` before the request
+  - if all IP sources fail, `request.checkIp()` may return `Result.success(null)`
+  - current code then does:
+    - `if (ipInfo == null) { return; }`
+  - consequence:
+    - widget can remain in endless loading state instead of switching to an explicit timeout / failure state
+  - this does **not** prove the root cause of connectivity loss, but it does explain why the UI can show "just loading" with little diagnostic value
+- Error-visibility limitation in current startup path:
+  - `applyProfile(...)` is wrapped in `loadingRun(...) -> safeRun(...)`
+  - setup failures are surfaced mainly as transient notifier text, while groups/providers can stay empty afterward
+  - consequence:
+    - a core/setup failure during startup can look like "no servers / no IP / loading" unless logs or notifier text are captured
+- Local environment limitation during this investigation round:
+  - `flutter` is not installed in the current workstation environment
+  - `dart` is not installed in the current workstation environment
+  - because of that, local `flutter test` / `dart analyze` could not be executed here
+  - heavy validation should continue via GitHub Actions in `makriq-org/FlClash`
+- Current best hypothesis ranking before device/log evidence:
+  - highest-risk area by churn:
+    - Android rebrand/runtime namespace changes around `7996e3b` and `a565f2d`
+  - plausible startup interaction:
+    - early unawaited self-update check / dialog during app initialization
+  - confirmed secondary UI bug:
+    - network detection spinner can hide failure by never switching to timeout when all IP sources fail
+- Practical next evidence needed for root-cause isolation:
+  - compare behavior between:
+    - `v0.8.96`
+    - `v0.8.97`
+    - `v0.8.98`
+  - capture notifier/log output during a failing Android launch
+  - inspect whether core/setup/profile application fails before proxy groups are requested

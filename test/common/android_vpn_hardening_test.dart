@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/android_vpn_hardening.dart';
+import 'package:fl_clash/common/task.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,11 @@ org.telegram.messenger
         },
         isAndroid: true,
         profilesPath: profilesDir.path,
+        installedPackageNames: const [
+          'com.termux',
+          'org.telegram.messenger',
+          'com.android.chrome',
+        ],
       );
 
       expect(normalized['tun']['include-package'], [
@@ -51,6 +57,11 @@ org.telegram.messenger
       final resolved = resolveAndroidProfileAccessControlOverride(
         normalized,
         isAndroid: true,
+        installedPackageNames: const [
+          'com.termux',
+          'org.telegram.messenger',
+          'com.android.chrome',
+        ],
       );
       expect(resolved?.mode, AccessControlMode.acceptSelected);
       expect(resolved?.acceptList, [
@@ -84,6 +95,10 @@ org.telegram.messenger
         },
         isAndroid: true,
         profilesPath: profilesDir.path,
+        installedPackageNames: const [
+          'org.mozilla.firefox',
+          'com.android.vending',
+        ],
       );
 
       expect(normalized['tun']['exclude-package'], [
@@ -100,6 +115,10 @@ org.telegram.messenger
       final resolved = resolveAndroidProfileAccessControlOverride(
         normalized,
         isAndroid: true,
+        installedPackageNames: const [
+          'org.mozilla.firefox',
+          'com.android.vending',
+        ],
       );
       expect(resolved?.mode, AccessControlMode.rejectSelected);
       expect(resolved?.rejectList, [
@@ -137,6 +156,10 @@ org.telegram.messenger
         isAndroid: true,
         profilesPath: profilesDir.path,
         profileId: 42,
+        installedPackageNames: const [
+          'org.telegram.messenger',
+          'com.android.chrome',
+        ],
       );
 
       expect(normalized['tun']['exclude-package'], [
@@ -146,6 +169,73 @@ org.telegram.messenger
       final cacheDir = Directory('${profilesDir.path}/providers/42/packages');
       expect(await cacheDir.exists(), isTrue);
       expect(await cacheDir.list().isEmpty, isFalse);
+    },
+  );
+
+  test(
+    'android profile split tunneling restores url-backed selectors from raw profile yaml',
+    () async {
+      final profilesDir = await Directory.systemTemp.createTemp(
+        'flclash-raw-profile-',
+      );
+      addTearDown(() async {
+        await profilesDir.delete(recursive: true);
+      });
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(server.close);
+      server.listen((request) async {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..write('ru.yandex.*\n!ru.yandex.browser\n');
+        await request.response.close();
+      });
+
+      final profileFile = File('${profilesDir.path}/42.yaml');
+      await profileFile.writeAsString('''
+tun:
+  enable: true
+  stack: gvisor
+  exclude-package-url: http://${server.address.address}:${server.port}/packages.txt
+''');
+
+      final restored = await restoreRawAndroidProfileAccessControlConfig(
+        {
+          'tun': {'enable': true, 'stack': 'gvisor'},
+        },
+        isAndroid: true,
+        profilePath: profileFile.path,
+      );
+
+      expect(
+        restored['tun']['exclude-package-url'],
+        'http://${server.address.address}:${server.port}/packages.txt',
+      );
+
+      final normalized = await normalizeAndroidProfileAccessControlConfig(
+        restored,
+        isAndroid: true,
+        profilesPath: profilesDir.path,
+        profileId: 42,
+        installedPackageNames: [
+          'ru.yandex.music',
+          'ru.yandex.browser',
+          'org.mozilla.firefox',
+        ],
+      );
+
+      expect(normalized['tun']['exclude-package'], ['ru.yandex.music']);
+
+      final resolved = resolveAndroidProfileAccessControlOverride(
+        normalized,
+        isAndroid: true,
+        installedPackageNames: [
+          'ru.yandex.music',
+          'ru.yandex.browser',
+          'org.mozilla.firefox',
+        ],
+      );
+      expect(resolved?.mode, AccessControlMode.rejectSelected);
+      expect(resolved?.rejectList, ['ru.yandex.music']);
     },
   );
 
@@ -175,6 +265,7 @@ org.telegram.messenger
         isAndroid: true,
         profilesPath: profilesDir.path,
         profileId: 7,
+        installedPackageNames: const ['org.mozilla.firefox'],
       );
       await server.close(force: true);
 
@@ -185,6 +276,7 @@ org.telegram.messenger
         isAndroid: true,
         profilesPath: profilesDir.path,
         profileId: 7,
+        installedPackageNames: const ['org.mozilla.firefox'],
       );
 
       expect(normalized['tun']['include-package'], ['org.mozilla.firefox']);
@@ -224,6 +316,7 @@ org.telegram.messenger
         isAndroid: true,
         profilesPath: profilesDir.path,
         profileId: 99,
+        installedPackageNames: const ['com.termux'],
       );
 
       expect(normalized['tun']['include-package'], ['com.termux']);
@@ -244,9 +337,7 @@ org.telegram.messenger
       await expectLater(
         () => normalizeAndroidProfileAccessControlConfig(
           {
-            'tun': {
-              'include-package-file': '../outside.txt',
-            },
+            'tun': {'include-package-file': '../outside.txt'},
           },
           isAndroid: true,
           profilesPath: profilesDir.path,
@@ -363,36 +454,27 @@ org.telegram.messenger
     'android profile split tunneling requests installed package access only for dynamic selectors',
     () {
       expect(
-        shouldRequestInstalledPackageAccessForAndroidProfile(
-          {
-            'tun': {
-              'exclude-package': ['com.termux'],
-            },
+        shouldRequestInstalledPackageAccessForAndroidProfile({
+          'tun': {
+            'exclude-package': ['com.termux'],
           },
-          isAndroid: true,
-        ),
+        }, isAndroid: true),
         isFalse,
       );
       expect(
-        shouldRequestInstalledPackageAccessForAndroidProfile(
-          {
-            'tun': {
-              'exclude-package': ['*.yandex.*'],
-            },
+        shouldRequestInstalledPackageAccessForAndroidProfile({
+          'tun': {
+            'exclude-package': ['*.yandex.*'],
           },
-          isAndroid: true,
-        ),
+        }, isAndroid: true),
         isTrue,
       );
       expect(
-        shouldRequestInstalledPackageAccessForAndroidProfile(
-          {
-            'tun': {
-              'exclude-package-file': ['lists/apps.txt'],
-            },
+        shouldRequestInstalledPackageAccessForAndroidProfile({
+          'tun': {
+            'exclude-package-file': ['lists/apps.txt'],
           },
-          isAndroid: true,
-        ),
+        }, isAndroid: true),
         isTrue,
       );
     },
@@ -433,10 +515,7 @@ org.telegram.messenger
         installedPackageNames: installedPackageNames,
       );
       expect(resolved?.mode, AccessControlMode.rejectSelected);
-      expect(resolved?.rejectList, [
-        'ru.yandex.music',
-        'org.mozilla.firefox',
-      ]);
+      expect(resolved?.rejectList, ['ru.yandex.music', 'org.mozilla.firefox']);
     },
   );
 
@@ -458,9 +537,7 @@ com.termux
 
       final normalized = await normalizeAndroidProfileAccessControlConfig(
         {
-          'tun': {
-            'include-package-file': 'include.txt',
-          },
+          'tun': {'include-package-file': 'include.txt'},
         },
         isAndroid: true,
         profilesPath: profilesDir.path,
@@ -480,16 +557,50 @@ com.termux
   );
 
   test(
-    'android profile split tunneling ignores dynamic selectors without installed package metadata',
-    () {
-      final resolved = resolveAndroidProfileAccessControlOverride(
+    'android profile split tunneling ignores exact selectors from external lists without installed package metadata',
+    () async {
+      final profilesDir = await Directory.systemTemp.createTemp(
+        'flclash-no-inventory-',
+      );
+      addTearDown(() async {
+        await profilesDir.delete(recursive: true);
+      });
+      final packagesFile = File('${profilesDir.path}/exclude.txt');
+      await packagesFile.writeAsString('''
+com.termux
+ru.yandex.*
+''');
+
+      final normalized = await normalizeAndroidProfileAccessControlConfig(
         {
           'tun': {
-            'exclude-package': ['*.yandex.*'],
+            'exclude-package': ['org.mozilla.firefox'],
+            'exclude-package-file': 'exclude.txt',
           },
         },
         isAndroid: true,
+        profilesPath: profilesDir.path,
       );
+
+      expect(normalized['tun']['exclude-package'], ['org.mozilla.firefox']);
+
+      final resolved = resolveAndroidProfileAccessControlOverride(
+        normalized,
+        isAndroid: true,
+      );
+      expect(resolved?.mode, AccessControlMode.rejectSelected);
+      expect(resolved?.rejectList, ['org.mozilla.firefox']);
+    },
+  );
+
+  test(
+    'android profile split tunneling ignores dynamic selectors without installed package metadata',
+    () {
+      final resolved = resolveAndroidProfileAccessControlOverride({
+        'tun': {
+          'exclude-package': ['*.yandex.*'],
+        },
+      }, isAndroid: true);
 
       expect(resolved, isNull);
     },
@@ -498,14 +609,11 @@ com.termux
   test(
     'android profile split tunneling keeps exact selectors when installed package metadata is unavailable',
     () {
-      final resolved = resolveAndroidProfileAccessControlOverride(
-        {
-          'tun': {
-            'exclude-package': ['com.termux', '*.yandex.*', '!com.termux'],
-          },
+      final resolved = resolveAndroidProfileAccessControlOverride({
+        'tun': {
+          'exclude-package': ['com.termux', '*.yandex.*', '!com.termux'],
         },
-        isAndroid: true,
-      );
+      }, isAndroid: true);
 
       expect(resolved, isNull);
     },
@@ -514,14 +622,11 @@ com.termux
   test(
     'android profile split tunneling keeps exact selectors without installed package metadata',
     () {
-      final resolved = resolveAndroidProfileAccessControlOverride(
-        {
-          'tun': {
-            'include-package': ['com.termux', '*.yandex.*'],
-          },
+      final resolved = resolveAndroidProfileAccessControlOverride({
+        'tun': {
+          'include-package': ['com.termux', '*.yandex.*'],
         },
-        isAndroid: true,
-      );
+      }, isAndroid: true);
 
       expect(resolved?.mode, AccessControlMode.acceptSelected);
       expect(resolved?.acceptList, ['com.termux']);
@@ -554,6 +659,38 @@ com.termux
 
     expect(resolved.stack, TunStack.system.name);
     expect(resolved.routeAddress, ['1.1.1.0/24', '2001:db8::/32']);
+  });
+
+  test('makeRealProfileTask preserves profile tun routing fields', () async {
+    final profile = await makeRealProfileTask(
+      MakeRealProfileState(
+        profilesPath: '/tmp/flclash-test',
+        profileId: 1,
+        rawConfig: {
+          'tun': {
+            'enable': true,
+            'stack': 'system',
+            'route-address': ['203.0.113.0/24'],
+            'auto-route': false,
+          },
+        },
+        realPatchConfig: const ClashConfig(
+          tun: Tun(
+            enable: true,
+            stack: TunStack.system,
+            autoRoute: true,
+            routeAddress: ['198.51.100.0/24'],
+          ),
+        ),
+        overrideDns: false,
+        appendSystemDns: false,
+        addedRules: const [],
+        defaultUA: 'test-agent',
+      ),
+    );
+
+    expect(profile['tun']['route-address'], ['203.0.113.0/24']);
+    expect(profile['tun']['auto-route'], isFalse);
   });
 
   test('android runtime config resolves tun and keeps listeners closed', () {

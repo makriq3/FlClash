@@ -651,7 +651,12 @@ extension SetupControllerExt on AppController {
     final vpnEnabled = _ref.read(
       vpnSettingProvider.select((state) => state.enable),
     );
-    final configMap = await coreController.getConfig(profileId);
+    final profilePath = await appPath.getProfilePath(profileId.toString());
+    final configMap = await restoreRawAndroidProfileAccessControlConfig(
+      await coreController.getConfig(profileId),
+      isAndroid: system.isAndroid,
+      profilePath: profilePath,
+    );
     String? scriptContent;
     final List<Rule> addedRules = [];
     if (setupState.overwriteType == OverwriteType.script) {
@@ -759,7 +764,9 @@ extension SetupControllerExt on AppController {
       onAndroidAccessControlResolved: onAndroidAccessControlResolved,
     );
     final resolvedSharedState = system.isAndroid ? this.sharedState : null;
-    if (system.isAndroid && preloadInvoke != null && resolvedSharedState != null) {
+    if (system.isAndroid &&
+        preloadInvoke != null &&
+        resolvedSharedState != null) {
       preferences.saveShareState(resolvedSharedState);
       await service?.syncState(resolvedSharedState.needSyncSharedState);
     }
@@ -774,7 +781,9 @@ extension SetupControllerExt on AppController {
     if (message.isNotEmpty) {
       throw message;
     }
-    if (system.isAndroid && preloadInvoke == null && resolvedSharedState != null) {
+    if (system.isAndroid &&
+        preloadInvoke == null &&
+        resolvedSharedState != null) {
       preferences.saveShareState(resolvedSharedState);
       await service?.syncState(resolvedSharedState.needSyncSharedState);
     }
