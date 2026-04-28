@@ -6,91 +6,95 @@
 
 # FlClash
 
-[![Downloads](https://img.shields.io/github/downloads/makriq-org/FlClash/total?style=flat-square&logo=github)](https://github.com/makriq-org/FlClash/releases/)[![Last Version](https://img.shields.io/github/release/makriq-org/FlClash/all.svg?style=flat-square)](https://github.com/makriq-org/FlClash/releases/)[![License](https://img.shields.io/github/license/makriq-org/FlClash?style=flat-square)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/makriq-org/FlClash/total?style=flat-square&logo=github)](https://github.com/makriq-org/FlClash/releases/)
+[![Latest Release](https://img.shields.io/github/release/makriq-org/FlClash/all.svg?style=flat-square)](https://github.com/makriq-org/FlClash/releases/)
+[![License](https://img.shields.io/github/license/makriq-org/FlClash?style=flat-square)](LICENSE)
 
-Независимая продуктовая линия FlClash, которую сопровождает `makriq`. Репозиторий собран как самостоятельный источник правды для продукта, документации и релизов без зависимости на инфраструктуру апстрима.
+FlClash is an independent fork of the original project maintained by `makriq`. This repository is the canonical source for the product, release process, documentation, and Android privacy-focused improvements shipped by the fork.
 
-## Что здесь поддерживается
+## Overview
 
-- самостоятельные мультиплатформенные релизы из этого репозитория;
-- Android-ориентированный контур приватности и защиты VPN;
-- документация по ограничениям, безопасности и операционному процессу;
-- предсказуемый release flow без ручной сборки changelog на лету.
+FlClash keeps the familiar Clash-compatible workflow across desktop and Android, while adding a release pipeline and feature set that can evolve independently from upstream.
 
-## Принципы сопровождения
+The current focus of the fork is:
 
-- `main` остаётся основной веткой продукта.
-- Стабильные релизы публикуются тегами `v*`, а предрелизы выпускаются отдельными `v*-pre*` тегами.
-- Release notes собираются из верхней секции `CHANGELOG.md`, без автокоммитов шума обратно в репозиторий.
-- Веточные Android-артефакты доступны отдельно через GitHub Actions.
+- predictable standalone releases from this repository;
+- hardened Android VPN behavior for privacy-sensitive use cases;
+- profile-driven Android split tunneling;
+- clearer release notes and maintenance documentation.
 
-## Документация
+## Highlights
 
-- [Исследование защиты Android VPN](docs/android-vpn-hardening.md)
-- [Раздельное туннелирование Android через профиль](docs/android-profile-split-tunneling.md)
-- [Политика безопасности](SECURITY.md)
-- [План развития](ROADMAP.md)
-- [Журнал изменений](CHANGELOG.md)
-- [Процесс релизов](docs/releasing.md)
+- Multi-platform app for Android, Windows, macOS, and Linux
+- Clash-compatible profiles and subscription workflow
+- WebDAV sync support
+- Built-in self-update flow for Android releases
+- Android split tunneling controlled directly from profile YAML
+- Additional Android VPN hardening to reduce unnecessary local exposure
 
-## Скриншоты
+## Android Focus
 
-Десктоп:
-<p style="text-align: center;">
-    <img alt="desktop" src="snapshots/desktop.gif">
+This fork adds an Android-only hardening layer that closes local listeners in VPN mode, avoids exposing the app through the Android system proxy path, and keeps routing behavior consistent on the hardened TUN path.
+
+Profile-managed split tunneling supports:
+
+- `tun.exclude-package` and `tun.include-package`
+- exact package names
+- file-backed package lists
+- URL-backed package lists
+- glob rules such as `*.example.*`
+- regex rules via `re:`
+- negation via `!`
+
+The goal is to reduce what the client exposes by default. It does not claim to make VPN usage fully undetectable through public Android APIs.
+
+## Documentation
+
+- [Release notes index](docs/releases/README.md)
+- [Changelog](CHANGELOG.md)
+- [Release process](docs/releasing.md)
+- [Android VPN hardening notes](docs/android-vpn-hardening.md)
+- [Android split tunneling notes](docs/android-profile-split-tunneling.md)
+- [Security policy](SECURITY.md)
+- [Roadmap](ROADMAP.md)
+
+## Screenshots
+
+Desktop:
+<p align="center">
+  <img alt="desktop" src="snapshots/desktop.gif">
 </p>
 
-Мобильная версия:
-<p style="text-align: center;">
-    <img alt="mobile" src="snapshots/mobile.gif">
+Mobile:
+<p align="center">
+  <img alt="mobile" src="snapshots/mobile.gif">
 </p>
 
-## Ключевые особенности
+## Build
 
-- Поддержка нескольких платформ: Android, Windows, macOS, Linux
-- Flutter-интерфейс с Clash-совместимым рабочим сценарием
-- Синхронизация через WebDAV
-- Поддержка подписок
-- Дополнительное усиление защиты Android VPN для чувствительных к приватности сценариев
+1. Initialize submodules:
 
-## Что уже сделано для Android VPN
+```bash
+git submodule update --init --recursive
+```
 
-В Android VPN-режиме этот форк теперь закрывает такие клиентские пути утечки, как:
+2. Install `Flutter` and `Go`.
 
-- локальные `mixed` / `socks` / `http` listeners,
-- доступный с localhost `external-controller`,
-- публикация Android system proxy,
-- стабильные, легко узнаваемые параметры туннеля.
+3. For Android builds, install `Android SDK` and `Android NDK`.
 
-Текущая модель усиления защиты также восстанавливает корректную доменную маршрутизацию на усиленном TUN-пути, поэтому правила прямой маршрутизации Android продолжают работать без повторного открытия исходной localhost-утечки.
+4. Prepare the target platform:
 
-Профиль теперь также может управлять Android split tunneling по приложениям: `tun.exclude-package` исключает выбранные приложения из VPN целиком, `tun.include-package` делает обратный режим, а внутри этих списков можно смешивать точные package names, маски вроде `*.yandex.*`, регулярные выражения через `re:` и исключения через `!`. Поля `tun.exclude-package-file` / `tun.include-package-file` позволяют вынести такие правила в отдельные файлы, а `tun.exclude-package-url` / `tun.include-package-url` умеют забирать их по прямой ссылке, включая GitHub Raw.
+```bash
+dart setup.dart android
+dart setup.dart windows --arch amd64
+dart setup.dart linux --arch amd64
+dart setup.dart macos --arch arm64
+```
 
-Важно: этот форк уменьшает то, что клиент раскрывает сам по себе. Он не заявляет о полном сокрытии VPN от публичных Android API без root/Xposed.
+## Release Model
 
-## Сборка
-
-1. Обновите submodules
-
-   ```bash
-   git submodule update --init --recursive
-   ```
-
-2. Установите `Flutter` и `Go`
-
-3. Для Android-сборок установите `Android SDK` и `Android NDK`
-
-4. Соберите нужную платформу:
-
-   ```bash
-   dart setup.dart android
-   dart setup.dart windows --arch amd64
-   dart setup.dart linux --arch amd64
-   dart setup.dart macos --arch arm64
-   ```
-
-## Релизы
-
-- Веточные Android-артефакты: GitHub Actions `android-веточная-сборка`
-- Стабильный мультиплатформенный релиз: push тега `v*`
-- Release notes и краткие обновления собираются из `CHANGELOG.md`, поэтому достаточно поддерживать в актуальном состоянии только верхнюю секцию под новый тег.
+- `main` is the product branch.
+- Stable releases use `v*` tags.
+- Pre-releases use `v*-pre*` tags.
+- GitHub release notes are generated from the top section of [`CHANGELOG.md`](CHANGELOG.md).
+- Longer release-specific notes live in [`docs/releases`](docs/releases/README.md).
