@@ -1,16 +1,14 @@
-name: android-веточная-сборка
+name: android-release-branch-build
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
-      - 'codex/**'
-      - 'feature/**'
-      - 'fix/**'
-  pull_request:
-    branches:
-      - main
+      - 'release/**'
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
 
 permissions:
   contents: read

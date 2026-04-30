@@ -1,15 +1,25 @@
-# Release Notes
+# Технические release notes
 
-This directory contains the long-form release notes for the independent `makriq` fork.
+В этой директории лежат подробные заметки по релизам форка `makriq-org/FlClash`.
 
-- One file per tag: `vX.Y.Z.md` or `vX.Y.Z-preN.md`
-- [`CHANGELOG.md`](../../CHANGELOG.md) stays short and user-facing
-- Files here are for context, rollout details, and technical notes worth preserving
+## Для чего они нужны
 
-If you add a new release note, keep it compact:
+`CHANGELOG.md` и GitHub Release должны оставаться короткими и понятными пользователю. Всё, что перегружает публичный релиз, выносится сюда:
 
-- what changed for users;
-- what changed technically;
-- any compatibility or rollout caveats.
+- детали реализации;
+- ограничения и caveats;
+- миграционные заметки;
+- rollout / verification notes;
+- дополнительные технические пояснения.
 
-Use [`_template.md`](_template.md) as the starting point.
+## Формат
+
+- один файл на релиз: `vX.Y.Z.md` или `vX.Y.Z-preN.md`;
+- файл должен быть компактным и структурированным;
+- пользовательская часть не дублируется дословно, а дополняется деталями.
+
+## Как использовать
+
+1. Подготовьте короткий пользовательский список изменений в [`CHANGELOG.md`](../../CHANGELOG.md).
+2. Если для релиза нужна техничка, создайте файл по шаблону [`_template.md`](_template.md).
+3. Релизный workflow сам добавит ссылку на этот файл в GitHub Release.

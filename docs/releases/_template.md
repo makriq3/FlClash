@@ -1,15 +1,16 @@
 # vX.Y.Z
 
-## Summary
+## Для кого этот релиз
 
-One short paragraph on what this release is for.
+Короткий абзац: зачем вообще выпускался этот релиз и что в нём главное.
 
-## User-facing changes
+## Что изменилось для пользователя
 
-- Keep this section readable for a normal user.
-- Focus on the two to four changes that matter.
+- 2–5 коротких пунктов нормальным языком.
+- Только заметный итог, без внутренней реализации.
 
-## Technical notes
+## Технические заметки
 
-- Record only the implementation details worth preserving.
-- Mention compatibility or rollout caveats only if they matter.
+- Что именно поменялось внутри.
+- Какие ограничения или caveats важно сохранить.
+- Нужны ли дополнительные проверки, миграции или rollout-пометки.
