@@ -1,83 +1,89 @@
 # Changelog
 
-This changelog covers the independent `makriq` fork starting from `v0.8.93`. Each entry is written for end users and mirrors the short release notes shown on GitHub Releases.
+Короткий changelog для пользователей форка `makriq-org/FlClash`, начиная с `v0.8.93`.
+
+Правила для этого файла:
+
+- только короткие пользовательские итоги;
+- без внутренней технички, CI-шума и служебных пометок;
+- подробности по конкретному релизу выносятся в `docs/releases/`.
 
 ## v0.9.02-pre1
 
-- Fixed Android split tunneling so profile rules from files and URLs are applied reliably again.
-- Stopped external package lists from leaking unrelated app matches when the installed-app list is unavailable.
-- Preserved route settings defined in the profile instead of overwriting them during runtime patching.
+- Исправлена работа Android split tunneling для списков приложений из файлов и URL.
+- Убраны ложные совпадения приложений, когда список установленных пакетов временно недоступен.
+- Сохранены route-настройки из активного профиля без лишней runtime-перезаписи.
 
 ## v0.9.01
 
-- Brought profile-driven Android split tunneling to a stable release.
-- Added support for app lists from files, URLs, masks, regex rules, and exclusions.
-- Improved updater reliability and tightened Android file and routing behavior around split tunneling.
+- В стабильный релиз доведено profile-driven раздельное туннелирование Android.
+- Добавлена поддержка списков приложений из файлов, URL, масок, regex-правил и исключений.
+- Улучшена надёжность обновления и связанных Android-сценариев вокруг split tunneling.
 
 ## v0.9.01-pre9
 
-- Stabilized the final Android split tunneling flow before the `v0.9.01` release.
+- Стабилизирован финальный Android-пайплайн split tunneling перед выпуском `v0.9.01`.
 
 ## v0.9.01-pre8
 
-- Removed extra friction around app access while keeping profile-based rules resilient.
+- Упрощён доступ к списку приложений при сохранении устойчивости profile-based правил.
 
 ## v0.9.01-pre7
 
-- Aligned the installed-app permission flow with the Android system behavior.
+- Поток доступа к установленным приложениям приведён в соответствие с поведением Android.
 
 ## v0.9.01-pre6
 
-- Kept exact split tunneling rules working even when installed-app access is unavailable.
+- Сохранена работа точных split tunneling-правил даже без доступа к списку установленных приложений.
 
 ## v0.9.01-pre5
 
-- Added mask, regex, and exclusion support for Android split tunneling rules.
+- Для Android split tunneling добавлена поддержка масок, regex и исключений.
 
 ## v0.9.01-pre4
 
-- Fixed profile switching for Android split tunneling.
+- Исправлено переключение профилей для Android split tunneling.
 
 ## v0.9.01-pre3
 
-- Added remote package lists and made the active profile the source of truth for Android app rules.
+- Добавлены удалённые списки пакетов и сделан активный профиль источником истины для Android app rules.
 
 ## v0.9.01-pre2
 
-- Added file-backed package lists for Android split tunneling.
+- Добавлены файловые списки пакетов для Android split tunneling.
 
 ## v0.9.01-pre1
 
-- Added profile-driven Android split tunneling.
+- Добавлено profile-driven раздельное туннелирование Android.
 
 ## v0.9.00
 
-- Finalized the standalone release flow and improved update-channel behavior.
+- Финализирован автономный релизный процесс и улучшено поведение каналов обновления.
 
 ## v0.9.00-pre1
 
-- Introduced the pre-release update channel and the fork-owned release pipeline.
+- Добавлен prerelease-канал обновлений и собственный релизный пайплайн форка.
 
 ## v0.8.98
 
-- Refined the Android update dialog and skip-update behavior.
+- Доработан Android-диалог обновления и логика пропуска релиза.
 
 ## v0.8.97
 
-- Cleaned up repository-facing documentation and branch layout for the standalone fork.
+- Приведены в порядок публичная документация и структура сопровождения форка.
 
 ## v0.8.96
 
-- Finished the remaining standalone branding cleanup.
+- Завершена оставшаяся очистка standalone-брендинга.
 
 ## v0.8.95
 
-- Added Android self-update support and moved the product to standalone identifiers.
+- Добавлено Android self-update и переведены идентификаторы продукта на standalone-модель.
 
 ## v0.8.94
 
-- Restored correct Android routing on the hardened TUN path.
+- Восстановлена корректная Android-маршрутизация на hardened TUN-пути.
 
 ## v0.8.93
 
-- Introduced Android VPN hardening and the initial fork-owned release pipeline.
+- Добавлено усиление Android VPN и запущен собственный релизный процесс форка.

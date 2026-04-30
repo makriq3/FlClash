@@ -1,88 +1,85 @@
-<div>
-
-[**简体中文**](README_zh_CN.md)
-
-</div>
-
 # FlClash
 
 [![Downloads](https://img.shields.io/github/downloads/makriq-org/FlClash/total?style=flat-square&logo=github)](https://github.com/makriq-org/FlClash/releases/)
 [![Latest Release](https://img.shields.io/github/release/makriq-org/FlClash/all.svg?style=flat-square)](https://github.com/makriq-org/FlClash/releases/)
 [![License](https://img.shields.io/github/license/makriq-org/FlClash?style=flat-square)](LICENSE)
 
-FlClash is an independent fork of the original project maintained by `makriq`. This repository is the canonical source for the product, release process, documentation, and Android privacy-focused improvements shipped by the fork.
+Независимый форк FlClash с упором на Android, приватность и аккуратные автономные релизы.
 
-## Overview
+> Основной язык публичной документации этого репозитория — русский.
 
-FlClash keeps the familiar Clash-compatible workflow across desktop and Android, while adding a release pipeline and feature set that can evolve independently from upstream.
+## Что это за проект
 
-The current focus of the fork is:
+FlClash — кроссплатформенный Clash-совместимый клиент для Android, Windows, macOS и Linux. Этот форк развивается независимо от апстрима и служит отдельным продуктовым репозиторием: здесь живут исходники, релизы, документация и правила сопровождения.
 
-- predictable standalone releases from this repository;
-- hardened Android VPN behavior for privacy-sensitive use cases;
-- profile-driven Android split tunneling;
-- clearer release notes and maintenance documentation.
+## Зачем нужен этот форк
 
-## Highlights
+Форк решает две практические задачи:
 
-- Multi-platform app for Android, Windows, macOS, and Linux
-- Clash-compatible profiles and subscription workflow
-- WebDAV sync support
-- Built-in self-update flow for Android releases
-- Android split tunneling controlled directly from profile YAML
-- Additional Android VPN hardening to reduce unnecessary local exposure
+- развивать Android-направление быстрее и аккуратнее, чем это возможно в апстриме;
+- выпускать понятные и воспроизводимые релизы прямо из этого репозитория.
 
-## Android Focus
+Текущий фокус:
 
-This fork adds an Android-only hardening layer that closes local listeners in VPN mode, avoids exposing the app through the Android system proxy path, and keeps routing behavior consistent on the hardened TUN path.
+- усиление приватности Android VPN-режима;
+- profile-driven split tunneling на Android;
+- понятные release notes без технического мусора;
+- прозрачный и предсказуемый релизный процесс.
 
-Profile-managed split tunneling supports:
+## Ключевые возможности
 
-- `tun.exclude-package` and `tun.include-package`
-- exact package names
-- file-backed package lists
-- URL-backed package lists
-- glob rules such as `*.example.*`
-- regex rules via `re:`
-- negation via `!`
+- Поддержка Android, Windows, macOS и Linux
+- Clash-совместимые профили и подписки
+- WebDAV-синхронизация
+- Самообновление Android-сборок
+- Android split tunneling из YAML-профиля
+- Дополнительное усиление Android VPN по умолчанию
 
-The goal is to reduce what the client exposes by default. It does not claim to make VPN usage fully undetectable through public Android APIs.
+## Что важно понимать про Android-приватность
 
-## Documentation
+Этот форк уменьшает практические client-side утечки в Android VPN-режиме: закрывает лишние localhost listeners, убирает лишнюю публикацию локального proxy в систему и делает поведение Android-пайплайна более безопасным по умолчанию.
 
-- [Release notes index](docs/releases/README.md)
-- [Changelog](CHANGELOG.md)
-- [Release process](docs/releasing.md)
-- [Android VPN hardening notes](docs/android-vpn-hardening.md)
-- [Android split tunneling notes](docs/android-profile-split-tunneling.md)
-- [Security policy](SECURITY.md)
-- [Roadmap](ROADMAP.md)
+При этом проект **не обещает** «полную невидимость VPN». Публичные Android API по-прежнему могут показывать часть VPN-сигналов, и это уже не решается только клиентом без root/Xposed-подобного слоя.
 
-## Screenshots
+Подробности:
 
-Desktop:
+- [Исследование защиты Android VPN](docs/android-vpn-hardening.md)
+- [Раздельное туннелирование Android через профиль](docs/android-profile-split-tunneling.md)
+- [Политика безопасности](SECURITY.md)
+
+## Документация
+
+- [Правила ведения репозитория](CONTRIBUTING.md)
+- [Процесс релизов](docs/releasing.md)
+- [Краткий changelog для пользователей](CHANGELOG.md)
+- [Технические release notes](docs/releases/README.md)
+- [План развития](ROADMAP.md)
+
+## Скриншоты
+
+### Desktop
+
 <p align="center">
   <img alt="desktop" src="snapshots/desktop.gif">
 </p>
 
-Mobile:
+### Mobile
+
 <p align="center">
   <img alt="mobile" src="snapshots/mobile.gif">
 </p>
 
-## Build
+## Сборка
 
-1. Initialize submodules:
+1. Инициализируйте submodules:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-2. Install `Flutter` and `Go`.
-
-3. For Android builds, install `Android SDK` and `Android NDK`.
-
-4. Prepare the target platform:
+2. Установите `Flutter` и `Go`.
+3. Для Android-сборки установите `Android SDK` и `Android NDK`.
+4. Подготовьте нужную платформу:
 
 ```bash
 dart setup.dart android
@@ -91,10 +88,15 @@ dart setup.dart linux --arch amd64
 dart setup.dart macos --arch arm64
 ```
 
-## Release Model
+## Модель релизов
 
-- `main` is the product branch.
-- Stable releases use `v*` tags.
-- Pre-releases use `v*-pre*` tags.
-- GitHub release notes are generated from the top section of [`CHANGELOG.md`](CHANGELOG.md).
-- Longer release-specific notes live in [`docs/releases`](docs/releases/README.md).
+- `main` хранит только то, что уже прошло предрелизную обкатку.
+- Каждый релиз готовится в отдельной ветке `release/vX.Y.Z`.
+- Предрелизы публикуются тегами `vX.Y.Z-preN` прямо из release-ветки.
+- После проверки release-ветка мержится в `main`, и только потом выпускается стабильный тег `vX.Y.Z`.
+- Короткий текст релиза берётся из верхней секции [`CHANGELOG.md`](CHANGELOG.md).
+- Подробная техничка живёт в [`docs/releases`](docs/releases/README.md).
+
+## Совместимость со старой структурой
+
+Файл [README_zh_CN.md](README_zh_CN.md) оставлен только как совместимый указатель на основную русскоязычную документацию.
