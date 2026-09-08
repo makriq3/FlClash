@@ -863,3 +863,11 @@
     - `v0.8.98`
   - capture notifier/log output during a failing Android launch
   - inspect whether core/setup/profile application fails before proxy groups are requested
+
+### Mihomo v1.19.30 Upgrade And FlClash v0.9.23 (2026-09-08)
+
+- `core/Clash.Meta` is maintained in `makriq-org/mihomo` on branch `FlClash`.
+- The FlClash-compatible core is based on upstream Mihomo `v1.19.30` and carries the integration patch previously used on `v1.19.27`.
+- The embedded core reports `v1.19.30-flclash` instead of the stale source default `1.10.0`.
+- The top-level Go dependency graph was synchronized with Mihomo `v1.19.30` using `go mod tidy`.
+- Local validation completed with the full Mihomo `go test ./...` suite; Android release validation remains gated by GitHub Actions.

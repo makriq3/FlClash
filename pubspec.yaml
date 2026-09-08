@@ -1,7 +1,7 @@
 name: fl_clash
 description: Независимый релиз FlClash от makriq с упором на защиту Android и улучшенное обновление приложения.
 publish_to: 'none'
-version: 0.9.22+2026070402
+version: 0.9.23+2026090801
 environment:
   sdk: '>=3.8.0 <4.0.0'
 
